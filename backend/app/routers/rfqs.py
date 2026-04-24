@@ -9,9 +9,11 @@ from app.dependencies import get_db
 from app.models.auction_config import AuctionConfig
 from app.models.rfq import RFQ
 from app.models.activity_log import ActivityLog
+from app.models.bid import Bid
 from app.schemas.rfq import AuctionConfigCreate, RFQCreate, RFQResponse
 from app.auth import get_current_user
 from app.models.user import User
+from sqlalchemy import delete
 
 router = APIRouter()
 
@@ -119,3 +121,24 @@ async def read_rfq(rfq_id: UUID, current_user: User = Depends(get_current_user),
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Auction configuration missing")
 
     return build_rfq_response(rfq, config)
+
+
+@router.delete("/rfq/{rfq_id}", status_code=204)
+async def delete_rfq(rfq_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    if current_user.role != "buyer":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only buyers can delete RFQs")
+
+    result = await db.execute(select(RFQ).where(RFQ.id == rfq_id))
+    rfq = result.scalar_one_or_none()
+    if not rfq:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="RFQ not found")
+
+    if rfq.buyer_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only delete your own RFQs")
+
+    await db.execute(delete(ActivityLog).where(ActivityLog.rfq_id == rfq_id))
+    await db.execute(delete(Bid).where(Bid.rfq_id == rfq_id))
+    await db.execute(delete(AuctionConfig).where(AuctionConfig.rfq_id == rfq_id))
+    await db.execute(delete(RFQ).where(RFQ.id == rfq_id))
+
+    await db.commit()

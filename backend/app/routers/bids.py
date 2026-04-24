@@ -92,8 +92,15 @@ async def place_bid(bid_in: BidCreate, current_user: User = Depends(get_current_
 
     await _close_rfq_if_expired(rfq, db)
     now = datetime.utcnow()
-    if rfq.status != "active" or now >= _normalize_datetime(rfq.current_bid_close_time) or now < _normalize_datetime(rfq.bid_start_time):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="RFQ is not accepting bids")
+    bid_start_time = _normalize_datetime(rfq.bid_start_time)
+    current_close_time = _normalize_datetime(rfq.current_bid_close_time)
+
+    if rfq.status != "active":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="RFQ is not active")
+    if now < bid_start_time:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="RFQ bidding has not started yet")
+    if now >= current_close_time:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="RFQ bidding is closed")
 
     await db.execute(
         update(Bid)
