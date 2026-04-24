@@ -1,14 +1,36 @@
+# =========================
 # Python
+# =========================
 venv/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*.sqlite3
 
-# Env
+# =========================
+# Environment Variables
+# =========================
 .env
 
-# Node (future frontend)
-node_modules/
+# =========================
+# Alembic
+# =========================
+alembic/__pycache__/
 
-# OS
+# =========================
+# VS Code / IDE
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# OS Files
+# =========================
 .DS_Store
 Thumbs.db
+
+# =========================
+# Node (future frontend)
+# =========================
+node_modules/
