@@ -44,12 +44,19 @@ async def _refresh_rfq_status(rfq: RFQ, db: AsyncSession) -> None:
         )
         db.add(log)
     elif rfq.status == "active" and now >= bid_close:
-        rfq.status = "closed"
+        forced_close = _normalize_datetime(rfq.forced_bid_close_time)
+        if bid_close >= forced_close:
+            rfq.status = "force_closed"
+            description = "Auction reached its forced close time limit."
+        else:
+            rfq.status = "closed"
+            description = "Auction closed because current close time was reached."
+            
         updated = True
         log = ActivityLog(
             rfq_id=rfq.id,
             event_type="auction_closed",
-            description="Auction closed because current close time was reached.",
+            description=description,
             new_close_time=rfq.current_bid_close_time,
         )
         db.add(log)

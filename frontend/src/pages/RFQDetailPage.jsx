@@ -350,6 +350,18 @@ export default function RFQDetailPage() {
                         className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
                       />
                     </label>
+                    <label className="block">
+                      <span className="text-sm font-medium text-slate-700">Destination charges</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={bidData.destination_charges}
+                        onChange={handleBidChange('destination_charges')}
+                        required
+                        className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                      />
+                    </label>
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">

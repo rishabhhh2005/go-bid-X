@@ -66,12 +66,19 @@ async def _refresh_rfq_status(rfq: RFQ, db: AsyncSession) -> None:
         )
         db.add(log)
     elif rfq.status == "active" and now >= bid_close:
-        rfq.status = "closed"
+        forced_close = _normalize_datetime(rfq.forced_bid_close_time)
+        if bid_close >= forced_close:
+            rfq.status = "force_closed"
+            description = "Auction reached its forced close time limit."
+        else:
+            rfq.status = "closed"
+            description = "Auction closed because current close time was reached."
+            
         updated = True
         log = ActivityLog(
             rfq_id=rfq.id,
             event_type="auction_closed",
-            description="Auction closed because current close time was reached.",
+            description=description,
             new_close_time=rfq.current_bid_close_time,
         )
         db.add(log)
@@ -124,17 +131,23 @@ async def create_rfq(rfq_in: RFQCreate, current_user: User = Depends(get_current
     db.add(rfq)
     await db.flush()
 
-    config_in: AuctionConfigCreate = rfq_in.auction_config
-    config = AuctionConfig(
-        rfq_id=rfq.id,
-        trigger_window_minutes=config_in.trigger_window_minutes,
-        extension_duration_minutes=config_in.extension_duration_minutes,
-        extension_trigger_type=config_in.extension_trigger_type,
-    )
-    db.add(config)
+    if rfq.is_british_auction:
+        config_in: AuctionConfigCreate = rfq_in.auction_config
+        config = AuctionConfig(
+            rfq_id=rfq.id,
+            trigger_window_minutes=config_in.trigger_window_minutes,
+            extension_duration_minutes=config_in.extension_duration_minutes,
+            extension_trigger_type=config_in.extension_trigger_type,
+        )
+        db.add(config)
+    
     await db.commit()
     await db.refresh(rfq)
-    await db.refresh(config)
+    
+    config = None
+    if rfq.is_british_auction:
+        config_result = await db.execute(select(AuctionConfig).where(AuctionConfig.rfq_id == rfq.id))
+        config = config_result.scalar_one_or_none()
 
     return build_rfq_response(rfq, config)
 
@@ -163,7 +176,7 @@ async def read_rfq(rfq_id: str, current_user: User = Depends(get_current_user), 
 
     config_result = await db.execute(select(AuctionConfig).where(AuctionConfig.rfq_id == rfq.id))
     config = config_result.scalar_one_or_none()
-    if not config:
+    if rfq.is_british_auction and not config:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Auction configuration missing")
 
     # Fetch lowest bid
@@ -194,8 +207,7 @@ async def list_rfqs(current_user: User = Depends(get_current_user), db: AsyncSes
         lowest_bid = bid_result.scalar_one_or_none()
         rfq.current_lowest_bid = float(lowest_bid.total_amount) if lowest_bid else None
         
-        if config:
-            responses.append(build_rfq_response(rfq, config))
+        responses.append(build_rfq_response(rfq, config))
             
     return responses
 
