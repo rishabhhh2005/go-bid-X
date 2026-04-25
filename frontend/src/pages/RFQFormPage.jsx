@@ -54,7 +54,8 @@ export default function RFQFormPage() {
       saveLocalRfq(created)
       navigate('/dashboard', { replace: true })
     } catch (err) {
-      setError('Unable to create RFQ. Verify your dates and try again.')
+      const backendMessage = err.response?.data?.detail
+      setError(backendMessage || 'Unable to create RFQ. Verify your dates and try again.')
     } finally {
       setSubmitting(false)
     }

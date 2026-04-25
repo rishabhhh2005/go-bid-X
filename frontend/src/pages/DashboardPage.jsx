@@ -26,6 +26,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [openRfqId, setOpenRfqId] = useState('')
+  const [deletingId, setDeletingId] = useState(null)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -51,12 +52,15 @@ export default function DashboardPage() {
   }, [])
 
   const handleDelete = async (id) => {
+    setDeletingId(id)
     try {
       await deleteRfq(id)
       setRfqs((current) => current.filter((item) => item.id !== id))
       removeLocalRfq(id)
     } catch (err) {
       setError('Failed to delete RFQ. Please try again.')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -140,9 +144,10 @@ export default function DashboardPage() {
                       <button
                         type="button"
                         onClick={() => handleDelete(rfq.id)}
-                        className="mt-4 rounded-2xl bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600"
+                        disabled={deletingId === rfq.id}
+                        className="mt-4 rounded-2xl bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600 disabled:opacity-60"
                       >
-                        Delete RFQ
+                        {deletingId === rfq.id ? 'Deleting…' : 'Delete RFQ'}
                       </button>
                     )}
                   </div>

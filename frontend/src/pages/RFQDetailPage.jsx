@@ -37,6 +37,7 @@ export default function RFQDetailPage() {
   const [activityLogs, setActivityLogs] = useState([])
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     const loadData = async () => {
@@ -114,6 +115,7 @@ export default function RFQDetailPage() {
     event.preventDefault()
     setError('')
     setSuccess('')
+    setSubmitting(true)
     try {
       await placeBid({
         rfq_id: id,
@@ -143,6 +145,8 @@ export default function RFQDetailPage() {
       })
     } catch (err) {
       setError('Failed to submit bid. Verify the values and try again.')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -391,8 +395,12 @@ export default function RFQDetailPage() {
                     </div>
                   )}
 
-                  <button type="submit" className="rounded-2xl bg-sky-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-sky-700">
-                    Submit bid
+                  <button 
+                    type="submit" 
+                    disabled={submitting}
+                    className="rounded-2xl bg-sky-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:opacity-60"
+                  >
+                    {submitting ? 'Submitting bid…' : 'Submit bid'}
                   </button>
                 </form>
               </section>
