@@ -52,13 +52,37 @@ async def _apply_rank_updates(rfq_id: UUID, db: AsyncSession) -> None:
         bid.rank = rank
 
 
-async def _maybe_extend_auction(rfq: RFQ, config: AuctionConfig, db: AsyncSession, supplier_id: UUID) -> bool:
+async def _maybe_extend_auction(
+    rfq: RFQ,
+    config: AuctionConfig,
+    db: AsyncSession,
+    supplier_id: UUID,
+    rank_changed: bool = False,
+    l1_changed: bool = False
+) -> bool:
     now = datetime.utcnow()
     if not config or config.trigger_window_minutes <= 0:
         return False
 
     trigger_time = rfq.current_bid_close_time - timedelta(minutes=config.trigger_window_minutes)
     if now < trigger_time or rfq.current_bid_close_time >= rfq.forced_bid_close_time:
+        return False
+
+    # Check trigger condition
+    should_extend = False
+    reason_desc = ""
+
+    if config.extension_trigger_type == "bid_received":
+        should_extend = True
+        reason_desc = "A new bid was received in the trigger window."
+    elif config.extension_trigger_type == "any_rank_change" and rank_changed:
+        should_extend = True
+        reason_desc = "A supplier rank change occurred in the trigger window."
+    elif config.extension_trigger_type == "l1_rank_change" and l1_changed:
+        should_extend = True
+        reason_desc = "The lowest bidder (L1) changed in the trigger window."
+
+    if not should_extend:
         return False
 
     new_close_time = rfq.current_bid_close_time + timedelta(minutes=config.extension_duration_minutes)
@@ -70,7 +94,7 @@ async def _maybe_extend_auction(rfq: RFQ, config: AuctionConfig, db: AsyncSessio
         log = ActivityLog(
             rfq_id=rfq.id,
             event_type="time_extended",
-            description="Auction extended because a bid arrived during the trigger window.",
+            description=reason_desc,
             extension_reason=config.extension_trigger_type,
             new_close_time=new_close_time,
             triggered_by_supplier_id=supplier_id,
@@ -115,12 +139,26 @@ async def place_bid(bid_in: BidCreate, current_user: User = Depends(get_current_
     if now >= current_close_time:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="RFQ bidding is closed")
 
+    # Capture state before new bid
+    old_l1_supplier_id = None
+    old_ranks = {}
+    
+    existing_bids_result = await db.execute(
+        select(Bid).where(Bid.rfq_id == rfq.id, Bid.is_active == True)
+    )
+    for b in existing_bids_result.scalars().all():
+        old_ranks[b.supplier_id] = b.rank
+        if b.rank == 1:
+            old_l1_supplier_id = b.supplier_id
+
+    # Deactivate previous bid from this supplier
     await db.execute(
         update(Bid)
         .where(Bid.rfq_id == rfq.id, Bid.supplier_id == current_user.id, Bid.is_active == True)
         .values(is_active=False)
     )
 
+    # Add new bid
     bid = Bid(
         rfq_id=rfq.id,
         supplier_id=current_user.id,
@@ -130,20 +168,45 @@ async def place_bid(bid_in: BidCreate, current_user: User = Depends(get_current_
         destination_charges=bid_in.destination_charges,
         total_amount=bid_in.total_amount,
         transit_time_days=bid_in.transit_time_days,
-        quote_validity_date=bid_in.quote_validity_date,
+        quote_validity_date=_normalize_datetime(bid_in.quote_validity_date) if bid_in.quote_validity_date else None,
     )
     db.add(bid)
+    await db.flush() # Get ID and allow ranking
+
+    # Apply rank updates
+    await _apply_rank_updates(rfq.id, db)
+    await db.refresh(bid)
+
+    # Capture state after new bid
+    new_l1_supplier_id = None
+    rank_changed = False
+    
+    active_bids_result = await db.execute(
+        select(Bid).where(Bid.rfq_id == rfq.id, Bid.is_active == True)
+    )
+    active_bids = active_bids_result.scalars().all()
+    for b in active_bids:
+        if b.rank == 1:
+            new_l1_supplier_id = b.supplier_id
+        if b.supplier_id not in old_ranks or old_ranks[b.supplier_id] != b.rank:
+            rank_changed = True
+
+    l1_changed = old_l1_supplier_id != new_l1_supplier_id
 
     config_result = await db.execute(select(AuctionConfig).where(AuctionConfig.rfq_id == rfq.id))
     config = config_result.scalar_one_or_none()
 
-    await _apply_rank_updates(rfq.id, db)
+    # Maybe extend
+    extended = await _maybe_extend_auction(
+        rfq, config, db, current_user.id, 
+        rank_changed=rank_changed, 
+        l1_changed=l1_changed
+    )
 
-    extended = await _maybe_extend_auction(rfq, config, db, current_user.id)
     bid_log = ActivityLog(
         rfq_id=rfq.id,
         event_type="bid_submitted",
-        description=f"Supplier {current_user.email} submitted a bid.",
+        description=f"Supplier {current_user.email} submitted a bid (Total: ${bid.total_amount}).",
         triggered_by_supplier_id=current_user.id,
     )
     db.add(bid_log)
@@ -151,14 +214,6 @@ async def place_bid(bid_in: BidCreate, current_user: User = Depends(get_current_
     await db.commit()
     await db.refresh(bid)
     await db.refresh(rfq)
-
-    if extended:
-        await db.refresh(rfq)
-        await db.refresh(bid)
-
-    await _apply_rank_updates(rfq.id, db)
-    await db.commit()
-    await db.refresh(bid)
 
     update_result = await db.execute(
         select(Bid).where(Bid.rfq_id == rfq.id, Bid.is_active == True).order_by(Bid.total_amount.asc(), Bid.submitted_at.asc())
