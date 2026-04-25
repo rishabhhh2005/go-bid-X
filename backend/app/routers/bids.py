@@ -20,7 +20,7 @@ router = APIRouter()
 
 def _normalize_datetime(value: datetime) -> datetime:
     if value.tzinfo is None:
-        return value
+        return value.replace(tzinfo=None)
     return value.astimezone(timezone.utc).replace(tzinfo=None)
 
 
@@ -28,19 +28,38 @@ def _build_bid_response(bid: Bid) -> BidResponse:
     return BidResponse.from_orm(bid)
 
 
-async def _close_rfq_if_expired(rfq: RFQ, db: AsyncSession) -> None:
-    now = datetime.utcnow()
-    if rfq.status == "active" and now >= _normalize_datetime(rfq.current_bid_close_time):
+async def _refresh_rfq_status(rfq: RFQ, db: AsyncSession) -> None:
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    bid_start = _normalize_datetime(rfq.bid_start_time)
+    bid_close = _normalize_datetime(rfq.current_bid_close_time)
+    
+    updated = False
+    if rfq.status == "draft" and now >= bid_start and now < bid_close:
+        rfq.status = "active"
+        updated = True
+        log = ActivityLog(
+            rfq_id=rfq.id,
+            event_type="bid_submitted", 
+            description="RFQ moved from draft to active status.",
+        )
+        db.add(log)
+    elif rfq.status == "active" and now >= bid_close:
         rfq.status = "closed"
+        updated = True
         log = ActivityLog(
             rfq_id=rfq.id,
             event_type="auction_closed",
-            description="Auction closed because bidding time expired.",
+            description="Auction closed because current close time was reached.",
             new_close_time=rfq.current_bid_close_time,
         )
         db.add(log)
+    
+    if updated:
         await db.commit()
         await db.refresh(rfq)
+
+async def _close_rfq_if_expired(rfq: RFQ, db: AsyncSession) -> None:
+    await _refresh_rfq_status(rfq, db)
 
 
 async def _apply_rank_updates(rfq_id: UUID, db: AsyncSession) -> None:

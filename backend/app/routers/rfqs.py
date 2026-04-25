@@ -22,8 +22,12 @@ from typing import Optional
 
 
 def _normalize_datetime(value: Optional[datetime]) -> Optional[datetime]:
-    if value is None or value.tzinfo is None:
-        return value
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        # Assume naive datetime is already UTC if it comes from the DB
+        return value.replace(tzinfo=None)
+    # Convert to UTC and strip tzinfo for database storage
     return value.astimezone(timezone.utc).replace(tzinfo=None)
 
 
@@ -46,10 +50,24 @@ def build_rfq_response(rfq: RFQ, config: AuctionConfig) -> dict:
     }
 
 
-async def _close_rfq_if_expired(rfq: RFQ, db: AsyncSession) -> None:
-    now = datetime.utcnow()
-    if rfq.status == "active" and now >= _normalize_datetime(rfq.current_bid_close_time):
+async def _refresh_rfq_status(rfq: RFQ, db: AsyncSession) -> None:
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    bid_start = _normalize_datetime(rfq.bid_start_time)
+    bid_close = _normalize_datetime(rfq.current_bid_close_time)
+    
+    updated = False
+    if rfq.status == "draft" and now >= bid_start and now < bid_close:
+        rfq.status = "active"
+        updated = True
+        log = ActivityLog(
+            rfq_id=rfq.id,
+            event_type="bid_submitted", # Using an existing type or we could add 'auction_activated'
+            description="RFQ moved from draft to active status.",
+        )
+        db.add(log)
+    elif rfq.status == "active" and now >= bid_close:
         rfq.status = "closed"
+        updated = True
         log = ActivityLog(
             rfq_id=rfq.id,
             event_type="auction_closed",
@@ -57,8 +75,14 @@ async def _close_rfq_if_expired(rfq: RFQ, db: AsyncSession) -> None:
             new_close_time=rfq.current_bid_close_time,
         )
         db.add(log)
+    
+    if updated:
         await db.commit()
         await db.refresh(rfq)
+
+# Keeping the old name for compatibility if used elsewhere, but redirecting to new logic
+async def _close_rfq_if_expired(rfq: RFQ, db: AsyncSession) -> None:
+    await _refresh_rfq_status(rfq, db)
 
 
 @router.post("/rfq", response_model=RFQResponse)
@@ -69,7 +93,7 @@ async def create_rfq(rfq_in: RFQCreate, current_user: User = Depends(get_current
     bid_start_time = _normalize_datetime(rfq_in.bid_start_time)
     bid_close_time = _normalize_datetime(rfq_in.bid_close_time)
     forced_bid_close_time = _normalize_datetime(rfq_in.forced_bid_close_time)
-    current_time = datetime.utcnow()
+    current_time = datetime.now(timezone.utc).replace(tzinfo=None)
 
     if bid_close_time <= bid_start_time:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="bid_close_time must be after bid_start_time")
@@ -77,6 +101,14 @@ async def create_rfq(rfq_in: RFQCreate, current_user: User = Depends(get_current
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="forced_bid_close_time must be later than bid_close_time")
 
     pickup_service_date = _normalize_datetime(rfq_in.pickup_service_date)
+    
+    # Determine initial status
+    initial_status = "draft"
+    if bid_start_time <= current_time < bid_close_time:
+        initial_status = "active"
+    elif current_time >= bid_close_time:
+        initial_status = "closed"
+
     rfq = RFQ(
         reference_id=rfq_in.reference_id,
         name=rfq_in.name,
@@ -87,7 +119,7 @@ async def create_rfq(rfq_in: RFQCreate, current_user: User = Depends(get_current
         forced_bid_close_time=forced_bid_close_time,
         pickup_service_date=pickup_service_date,
         is_british_auction=rfq_in.is_british_auction,
-        status="active" if bid_start_time <= current_time < bid_close_time else "draft",
+        status=initial_status,
     )
     db.add(rfq)
     await db.flush()
