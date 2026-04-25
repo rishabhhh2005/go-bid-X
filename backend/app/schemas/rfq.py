@@ -52,6 +52,7 @@ class RFQResponse(BaseModel):
     is_british_auction: bool
     status: str
     created_at: datetime
+    current_lowest_bid: Optional[float] = None
     auction_config: AuctionConfigResponse
 
     class Config:
