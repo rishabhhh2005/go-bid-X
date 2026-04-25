@@ -122,7 +122,11 @@ export default function DashboardPage() {
                         </Link>
                       </div>
                     </div>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-3xl bg-slate-50 p-4 text-sm text-slate-700">
+                        <p className="font-semibold text-slate-900">Current lowest bid</p>
+                        <p className="mt-2 text-sky-600 font-bold">{rfq.current_lowest_bid ? `$${rfq.current_lowest_bid.toLocaleString()}` : 'No bids yet'}</p>
+                      </div>
                       <div className="rounded-3xl bg-slate-50 p-4 text-sm text-slate-700">
                         <p className="font-semibold text-slate-900">Current close time</p>
                         <p className="mt-2">{formatDate(rfq.current_bid_close_time)}</p>

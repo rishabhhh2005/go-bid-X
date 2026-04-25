@@ -10,6 +10,7 @@ const defaultForm = {
   bid_start_time: '',
   bid_close_time: '',
   forced_bid_close_time: '',
+  pickup_service_date: '',
   carrier_name: '',
   is_british_auction: false,
   trigger_window_minutes: 5,
@@ -40,7 +41,7 @@ export default function RFQFormPage() {
         bid_start_time: new Date(form.bid_start_time).toISOString(),
         bid_close_time: new Date(form.bid_close_time).toISOString(),
         forced_bid_close_time: new Date(form.forced_bid_close_time).toISOString(),
-        pickup_service_date: null,
+        pickup_service_date: form.pickup_service_date ? new Date(form.pickup_service_date).toISOString() : null,
         is_british_auction: form.is_british_auction,
         auction_config: {
           trigger_window_minutes: Number(form.trigger_window_minutes),
@@ -125,6 +126,15 @@ export default function RFQFormPage() {
                 value={form.forced_bid_close_time}
                 onChange={handleChange('forced_bid_close_time')}
                 required
+                className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Pickup / Service date</span>
+              <input
+                type="datetime-local"
+                value={form.pickup_service_date}
+                onChange={handleChange('pickup_service_date')}
                 className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
               />
             </label>

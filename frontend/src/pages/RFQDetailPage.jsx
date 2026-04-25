@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { fetchBids, fetchRfq, placeBid } from '../services/appService'
+import { fetchActivityLogs, fetchBids, fetchRfq, placeBid } from '../services/appService'
 
 const parseUtcDate = (value) => {
   if (!value) return null
@@ -31,7 +31,10 @@ export default function RFQDetailPage() {
     origin_charges: '',
     destination_charges: '',
     total_amount: '',
+    transit_time_days: '',
+    quote_validity_date: '',
   })
+  const [activityLogs, setActivityLogs] = useState([])
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
@@ -39,9 +42,14 @@ export default function RFQDetailPage() {
     const loadData = async () => {
       setLoading(true)
       try {
-        const [rfqResponse, bidResponse] = await Promise.all([fetchRfq(id), fetchBids(id)])
+        const [rfqResponse, bidResponse, activityResponse] = await Promise.all([
+          fetchRfq(id),
+          fetchBids(id),
+          fetchActivityLogs(id)
+        ])
         setRfq(rfqResponse)
         setBids(bidResponse)
+        setActivityLogs(activityResponse)
       } catch (err) {
         setError('Unable to load RFQ or bids. Check the ID and try again.')
       } finally {
@@ -60,8 +68,12 @@ export default function RFQDetailPage() {
       try {
         const message = JSON.parse(event.data)
         if (message.event === 'new_bid') {
-          const refreshedBids = await fetchBids(id)
+          const [refreshedBids, refreshedActivity] = await Promise.all([
+            fetchBids(id),
+            fetchActivityLogs(id)
+          ])
           setBids(refreshedBids)
+          setActivityLogs(refreshedActivity)
           setRfq((current) => (current ? { ...current, current_bid_close_time: message.current_bid_close_time } : current))
         }
       } catch {
@@ -94,13 +106,25 @@ export default function RFQDetailPage() {
         origin_charges: Number(bidData.origin_charges),
         destination_charges: Number(bidData.destination_charges),
         total_amount: Number(bidData.total_amount),
-        transit_time_days: null,
-        quote_validity_date: null,
+        transit_time_days: bidData.transit_time_days ? Number(bidData.transit_time_days) : null,
+        quote_validity_date: bidData.quote_validity_date ? new Date(bidData.quote_validity_date).toISOString() : null,
       })
-      const refreshedBids = await fetchBids(id)
+      const [refreshedBids, refreshedActivity] = await Promise.all([
+        fetchBids(id),
+        fetchActivityLogs(id)
+      ])
       setBids(refreshedBids)
+      setActivityLogs(refreshedActivity)
       setSuccess('Bid submitted successfully.')
-      setBidData({ carrier_name: '', freight_charges: '', origin_charges: '', destination_charges: '', total_amount: '' })
+      setBidData({ 
+        carrier_name: '', 
+        freight_charges: '', 
+        origin_charges: '', 
+        destination_charges: '', 
+        total_amount: '',
+        transit_time_days: '',
+        quote_validity_date: ''
+      })
     } catch (err) {
       setError('Failed to submit bid. Verify the values and try again.')
     }
@@ -164,7 +188,31 @@ export default function RFQDetailPage() {
                   <p className="font-semibold text-slate-900">Bid close</p>
                   <p className="mt-2">{formatLabel(rfq.bid_close_time)}</p>
                 </div>
+                <div className="rounded-3xl bg-slate-50 p-4 text-sm text-slate-700">
+                  <p className="font-semibold text-slate-900">Pickup date</p>
+                  <p className="mt-2">{formatLabel(rfq.pickup_service_date)}</p>
+                </div>
               </div>
+
+              {rfq.auction_config && (
+                <div className="mt-8 border-t border-slate-100 pt-6">
+                  <h3 className="text-sm font-semibold uppercase tracking-[0.1em] text-slate-500">Auction Configuration</h3>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                    <div className="rounded-2xl border border-slate-100 p-3 text-sm">
+                      <p className="text-slate-500">Trigger Window</p>
+                      <p className="font-semibold">{rfq.auction_config.trigger_window_minutes} minutes</p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-100 p-3 text-sm">
+                      <p className="text-slate-500">Extension Duration</p>
+                      <p className="font-semibold">{rfq.auction_config.extension_duration_minutes} minutes</p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-100 p-3 text-sm">
+                      <p className="text-slate-500">Trigger Logic</p>
+                      <p className="font-semibold uppercase">{rfq.auction_config.extension_trigger_type.replace(/_/g, ' ')}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </section>
 
             <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
@@ -190,12 +238,45 @@ export default function RFQDetailPage() {
                           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-slate-600">{bid.rank ? `L${bid.rank}` : 'L–'}</span>
                         </div>
                         <div className="mt-3 grid gap-3 sm:grid-cols-2 text-sm text-slate-700">
-                          <p>Total: {bid.total_amount != null ? `$${bid.total_amount}` : '–'}</p>
+                          <p className="font-bold text-sky-600">Total: ${bid.total_amount != null ? bid.total_amount.toLocaleString() : '–'}</p>
                           <p>Submitted: {bid.submitted_at ? formatLabel(bid.submitted_at) : '–'}</p>
+                        </div>
+                        <div className="mt-2 grid gap-2 sm:grid-cols-3 text-xs text-slate-500">
+                          <p>Freight: ${bid.freight_charges}</p>
+                          <p>Origin: ${bid.origin_charges}</p>
+                          <p>Dest: ${bid.destination_charges}</p>
+                        </div>
+                        <div className="mt-2 flex gap-4 text-xs text-slate-600 border-t border-slate-100 pt-2">
+                           <p>Transit: {bid.transit_time_days ? `${bid.transit_time_days} days` : 'N/A'}</p>
+                           <p>Validity: {bid.quote_validity_date ? formatLabel(bid.quote_validity_date).split(',')[0] : 'N/A'}</p>
                         </div>
                       </div>
                     ))
                 )}
+              </div>
+
+              <div className="mt-10">
+                <h2 className="text-xl font-semibold text-slate-900">Activity Log</h2>
+                <div className="mt-4 space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                  {activityLogs.length === 0 ? (
+                    <p className="text-sm text-slate-500 italic">No activity yet.</p>
+                  ) : (
+                    activityLogs.map((log) => (
+                      <div key={log.id} className="flex gap-4 p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                        <div className="flex-shrink-0 mt-1">
+                          {log.event_type === 'time_extended' ? '⏳' : log.event_type === 'bid_submitted' ? '📝' : '🔒'}
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-800">{log.description}</p>
+                          {log.extension_reason && (
+                            <p className="text-xs text-sky-600 mt-1 uppercase font-semibold">Reason: {log.extension_reason.replace(/_/g, ' ')}</p>
+                          )}
+                          <p className="text-[10px] text-slate-400 mt-1">{formatLabel(log.created_at)}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </section>
 
@@ -255,18 +336,26 @@ export default function RFQDetailPage() {
                     </label>
                   </div>
 
-                  <label className="block">
-                    <span className="text-sm font-medium text-slate-700">Destination charges</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={bidData.destination_charges}
-                      onChange={handleBidChange('destination_charges')}
-                      required
-                      className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
-                    />
-                  </label>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="text-sm font-medium text-slate-700">Transit time (days)</span>
+                      <input
+                        type="number"
+                        value={bidData.transit_time_days}
+                        onChange={handleBidChange('transit_time_days')}
+                        className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="text-sm font-medium text-slate-700">Quote validity</span>
+                      <input
+                        type="datetime-local"
+                        value={bidData.quote_validity_date}
+                        onChange={handleBidChange('quote_validity_date')}
+                        className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                      />
+                    </label>
+                  </div>
 
                   {(error || success) && (
                     <div className={`rounded-2xl px-4 py-3 text-sm ${error ? 'bg-red-50 text-red-700 ring-1 ring-red-200' : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'}`}>
