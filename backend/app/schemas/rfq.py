@@ -1,8 +1,16 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel
+
+
+def _utc_datetime_encoder(value: datetime) -> str:
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    else:
+        value = value.astimezone(timezone.utc)
+    return value.isoformat().replace('+00:00', 'Z')
 
 
 class AuctionConfigCreate(BaseModel):
@@ -48,3 +56,4 @@ class RFQResponse(BaseModel):
 
     class Config:
         from_attributes = True
+        json_encoders = {datetime: _utc_datetime_encoder}

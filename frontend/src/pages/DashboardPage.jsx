@@ -5,6 +5,21 @@ import SectionHeader from '../components/SectionHeader'
 import { fetchRfqs, deleteRfq } from '../services/appService'
 import { getLocalRfqs, removeLocalRfq } from '../services/localStorage'
 
+const parseUtcDate = (value) => {
+  if (!value) return null
+  const stringValue = String(value)
+  const utcString = stringValue.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/)
+    ? `${stringValue}Z`
+    : stringValue
+  const date = new Date(utcString)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+const formatDate = (value) => {
+  const date = parseUtcDate(value)
+  return date ? date.toLocaleString() : '—'
+}
+
 export default function DashboardPage() {
   const { user, logout } = useAuth()
   const [rfqs, setRfqs] = useState([])
@@ -110,11 +125,11 @@ export default function DashboardPage() {
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
                       <div className="rounded-3xl bg-slate-50 p-4 text-sm text-slate-700">
                         <p className="font-semibold text-slate-900">Current close time</p>
-                        <p className="mt-2">{new Date(rfq.current_bid_close_time).toLocaleString()}</p>
+                        <p className="mt-2">{formatDate(rfq.current_bid_close_time)}</p>
                       </div>
                       <div className="rounded-3xl bg-slate-50 p-4 text-sm text-slate-700">
                         <p className="font-semibold text-slate-900">Forced close time</p>
-                        <p className="mt-2">{new Date(rfq.forced_bid_close_time).toLocaleString()}</p>
+                        <p className="mt-2">{formatDate(rfq.forced_bid_close_time)}</p>
                       </div>
                     </div>
                     {user?.role === 'buyer' && (
@@ -137,15 +152,15 @@ export default function DashboardPage() {
           <aside className="space-y-6 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <div>
               <h2 className="text-xl font-semibold text-slate-900">Quick actions</h2>
-              <p className="mt-2 text-sm text-slate-600">Open RFQ details by ID.</p>
+              <p className="mt-2 text-sm text-slate-600">Open RFQ details by reference ID or UUID.</p>
             </div>
 
             <form onSubmit={handleOpenRfq} className="space-y-4">
-              <label className="text-sm font-medium text-slate-700">RFQ ID</label>
+              <label className="text-sm font-medium text-slate-700">RFQ reference ID or UUID</label>
               <input
                 value={openRfqId}
                 onChange={(event) => setOpenRfqId(event.target.value)}
-                placeholder="paste an RFQ ID"
+                placeholder="paste a reference ID or UUID"
                 className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
               />
               <button type="submit" className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">

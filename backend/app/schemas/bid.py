@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
 from uuid import UUID
@@ -6,8 +6,16 @@ from uuid import UUID
 from pydantic import BaseModel
 
 
+def _utc_datetime_encoder(value: datetime) -> str:
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    else:
+        value = value.astimezone(timezone.utc)
+    return value.isoformat().replace('+00:00', 'Z')
+
+
 class BidCreate(BaseModel):
-    rfq_id: UUID
+    rfq_id: str
     carrier_name: str
     freight_charges: Decimal
     origin_charges: Decimal = Decimal("0")
@@ -34,3 +42,4 @@ class BidResponse(BaseModel):
 
     class Config:
         from_attributes = True
+        json_encoders = {datetime: _utc_datetime_encoder}

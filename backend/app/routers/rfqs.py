@@ -106,10 +106,23 @@ async def create_rfq(rfq_in: RFQCreate, current_user: User = Depends(get_current
     return build_rfq_response(rfq, config)
 
 
+async def _get_rfq_by_identifier(identifier: str, db: AsyncSession) -> RFQ | None:
+    rfq = None
+    try:
+        rfq_result = await db.execute(select(RFQ).where(RFQ.id == UUID(identifier)))
+        rfq = rfq_result.scalar_one_or_none()
+    except (ValueError, TypeError):
+        rfq = None
+
+    if rfq is None:
+        result = await db.execute(select(RFQ).where(RFQ.reference_id == identifier))
+        rfq = result.scalar_one_or_none()
+    return rfq
+
+
 @router.get("/rfq/{rfq_id}", response_model=RFQResponse)
-async def read_rfq(rfq_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(RFQ).where(RFQ.id == rfq_id))
-    rfq = result.scalar_one_or_none()
+async def read_rfq(rfq_id: str, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    rfq = await _get_rfq_by_identifier(rfq_id, db)
     if not rfq:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="RFQ not found")
 
@@ -124,21 +137,20 @@ async def read_rfq(rfq_id: UUID, current_user: User = Depends(get_current_user),
 
 
 @router.delete("/rfq/{rfq_id}", status_code=204)
-async def delete_rfq(rfq_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def delete_rfq(rfq_id: str, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     if current_user.role != "buyer":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only buyers can delete RFQs")
 
-    result = await db.execute(select(RFQ).where(RFQ.id == rfq_id))
-    rfq = result.scalar_one_or_none()
+    rfq = await _get_rfq_by_identifier(rfq_id, db)
     if not rfq:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="RFQ not found")
 
     if rfq.buyer_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only delete your own RFQs")
 
-    await db.execute(delete(ActivityLog).where(ActivityLog.rfq_id == rfq_id))
-    await db.execute(delete(Bid).where(Bid.rfq_id == rfq_id))
-    await db.execute(delete(AuctionConfig).where(AuctionConfig.rfq_id == rfq_id))
-    await db.execute(delete(RFQ).where(RFQ.id == rfq_id))
+    await db.execute(delete(ActivityLog).where(ActivityLog.rfq_id == rfq.id))
+    await db.execute(delete(Bid).where(Bid.rfq_id == rfq.id))
+    await db.execute(delete(AuctionConfig).where(AuctionConfig.rfq_id == rfq.id))
+    await db.execute(delete(RFQ).where(RFQ.id == rfq.id))
 
     await db.commit()

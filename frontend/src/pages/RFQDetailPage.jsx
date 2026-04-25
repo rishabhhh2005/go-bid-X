@@ -3,7 +3,20 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { fetchBids, fetchRfq, placeBid } from '../services/appService'
 
-const formatLabel = (value) => (value ? new Date(value).toLocaleString() : '—')
+const parseUtcDate = (value) => {
+  if (!value) return null
+  const stringValue = String(value)
+  const utcString = stringValue.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/)
+    ? `${stringValue}Z`
+    : stringValue
+  const date = new Date(utcString)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+const formatLabel = (value) => {
+  const date = parseUtcDate(value)
+  return date ? date.toLocaleString() : '—'
+}
 
 export default function RFQDetailPage() {
   const { id } = useParams()
@@ -39,8 +52,9 @@ export default function RFQDetailPage() {
   }, [id])
 
   useEffect(() => {
-    if (!id) return
-    const ws = new WebSocket(`ws://127.0.0.1:8000/ws/rfq/${id}`)
+    const wsId = rfq?.id || id
+    if (!wsId) return
+    const ws = new WebSocket(`ws://127.0.0.1:8000/ws/rfq/${wsId}`)
 
     ws.addEventListener('message', async (event) => {
       try {
@@ -58,7 +72,7 @@ export default function RFQDetailPage() {
     return () => {
       ws.close()
     }
-  }, [id])
+  }, [id, rfq?.id])
 
   const canSubmitBid = useMemo(() => {
     return user?.role === 'supplier' && rfq?.status === 'active'
@@ -177,7 +191,7 @@ export default function RFQDetailPage() {
                         </div>
                         <div className="mt-3 grid gap-3 sm:grid-cols-2 text-sm text-slate-700">
                           <p>Total: {bid.total_amount != null ? `$${bid.total_amount}` : '–'}</p>
-                          <p>Submitted: {bid.submitted_at ? new Date(bid.submitted_at).toLocaleString() : '–'}</p>
+                          <p>Submitted: {bid.submitted_at ? formatLabel(bid.submitted_at) : '–'}</p>
                         </div>
                       </div>
                     ))

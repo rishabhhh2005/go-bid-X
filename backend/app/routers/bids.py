@@ -80,13 +80,26 @@ async def _maybe_extend_auction(rfq: RFQ, config: AuctionConfig, db: AsyncSessio
     return False
 
 
+async def _get_rfq_by_identifier(identifier: str, db: AsyncSession) -> RFQ | None:
+    rfq = None
+    try:
+        rfq_result = await db.execute(select(RFQ).where(RFQ.id == UUID(identifier)))
+        rfq = rfq_result.scalar_one_or_none()
+    except (ValueError, TypeError):
+        rfq = None
+
+    if rfq is None:
+        result = await db.execute(select(RFQ).where(RFQ.reference_id == identifier))
+        rfq = result.scalar_one_or_none()
+    return rfq
+
+
 @router.post("/bid", response_model=BidResponse)
 async def place_bid(bid_in: BidCreate, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     if current_user.role != "supplier":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only suppliers can place bids")
 
-    rfq_result = await db.execute(select(RFQ).where(RFQ.id == bid_in.rfq_id))
-    rfq = rfq_result.scalar_one_or_none()
+    rfq = await _get_rfq_by_identifier(str(bid_in.rfq_id), db)
     if not rfq:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="RFQ not found")
 
@@ -109,7 +122,7 @@ async def place_bid(bid_in: BidCreate, current_user: User = Depends(get_current_
     )
 
     bid = Bid(
-        rfq_id=bid_in.rfq_id,
+        rfq_id=rfq.id,
         supplier_id=current_user.id,
         carrier_name=bid_in.carrier_name,
         freight_charges=bid_in.freight_charges,
@@ -159,6 +172,13 @@ async def place_bid(bid_in: BidCreate, current_user: User = Depends(get_current_
         for active_bid in update_result.scalars().all()
     ]
 
+    submitted_at = bid.submitted_at
+    if submitted_at.tzinfo is None:
+        submitted_at = submitted_at.replace(tzinfo=timezone.utc)
+    current_bid_close_time = rfq.current_bid_close_time
+    if current_bid_close_time.tzinfo is None:
+        current_bid_close_time = current_bid_close_time.replace(tzinfo=timezone.utc)
+
     message = {
         "event": "new_bid",
         "bid": {
@@ -167,18 +187,23 @@ async def place_bid(bid_in: BidCreate, current_user: User = Depends(get_current_
             "supplier_id": str(bid.supplier_id),
             "total_amount": float(bid.total_amount),
             "rank": bid.rank,
-            "submitted_at": bid.submitted_at.isoformat(),
+            "submitted_at": submitted_at.isoformat().replace('+00:00', 'Z'),
         },
         "ranks": ranks,
-        "current_bid_close_time": rfq.current_bid_close_time.isoformat(),
+        "current_bid_close_time": current_bid_close_time.isoformat().replace('+00:00', 'Z'),
         "extended": extended,
     }
     await manager.broadcast(str(rfq.id), message)
+    await manager.broadcast(rfq.reference_id, message)
     return _build_bid_response(bid)
 
 
 @router.get("/bids/{rfq_id}", response_model=list[BidResponse])
-async def list_bids(rfq_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Bid).where(Bid.rfq_id == rfq_id).order_by(Bid.total_amount.asc(), Bid.submitted_at.asc()))
+async def list_bids(rfq_id: str, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    rfq = await _get_rfq_by_identifier(rfq_id, db)
+    if not rfq:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="RFQ not found")
+
+    result = await db.execute(select(Bid).where(Bid.rfq_id == rfq.id).order_by(Bid.total_amount.asc(), Bid.submitted_at.asc()))
     bids = result.scalars().all()
     return [_build_bid_response(bid) for bid in bids]
