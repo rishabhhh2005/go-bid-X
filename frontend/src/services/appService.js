@@ -43,3 +43,8 @@ export const placeBid = async (payload) => {
   const response = await api.post('/bid', payload)
   return response.data
 }
+
+export const fetchActivityLogs = async (rfqId) => {
+  const response = await api.get(`/rfq/${rfqId}/activity`)
+  return response.data
+}
