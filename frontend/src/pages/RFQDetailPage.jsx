@@ -60,31 +60,47 @@ export default function RFQDetailPage() {
   }, [id])
 
   useEffect(() => {
-    const wsId = rfq?.id || id
-    if (!wsId) return
-    const ws = new WebSocket(`ws://127.0.0.1:8000/ws/rfq/${wsId}`)
+    if (!id) return
+    
+    // Connect using the explicit IP to avoid localhost resolution issues
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const wsUrl = `${protocol}//127.0.0.1:8000/ws/rfq/${id}`
+    const ws = new WebSocket(wsUrl)
 
-    ws.addEventListener('message', async (event) => {
+    ws.onopen = () => console.log('WebSocket connected to', wsUrl)
+    ws.onerror = (err) => console.error('WebSocket error:', err)
+    
+    ws.onmessage = async (event) => {
       try {
         const message = JSON.parse(event.data)
+        console.log('WebSocket message received:', message)
+        
         if (message.event === 'new_bid') {
+          // Fetch the absolute latest data
           const [refreshedBids, refreshedActivity] = await Promise.all([
             fetchBids(id),
             fetchActivityLogs(id)
           ])
           setBids(refreshedBids)
           setActivityLogs(refreshedActivity)
-          setRfq((current) => (current ? { ...current, current_bid_close_time: message.current_bid_close_time } : current))
+          
+          // Update RFQ state with new close time from message
+          if (message.current_bid_close_time) {
+            setRfq((current) => {
+              if (!current) return null
+              return { ...current, current_bid_close_time: message.current_bid_close_time }
+            })
+          }
         }
-      } catch {
-        // ignore malformed websocket messages
+      } catch (err) {
+        console.error('Error processing WebSocket message:', err)
       }
-    })
+    }
 
     return () => {
       ws.close()
     }
-  }, [id, rfq?.id])
+  }, [id])
 
   const canSubmitBid = useMemo(() => {
     return user?.role === 'supplier' && rfq?.status === 'active'
