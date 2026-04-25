@@ -9,7 +9,14 @@ from app.database import Base
 from app.models import user, rfq, bid, auction_config, activity_log
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
+from app.config import settings
 config = context.config
+
+# Use sync driver for migrations
+sync_url = settings.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
+if "ssl=require" in sync_url:
+    sync_url = sync_url.replace("ssl=require", "sslmode=require")
+config.set_main_option("sqlalchemy.url", sync_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

@@ -11,7 +11,7 @@ class Bid(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
-    rfq_id = Column(UUID(as_uuid=True), ForeignKey("rfqs.id"), nullable=False)
+    rfq_id = Column(UUID(as_uuid=True), ForeignKey("rfqs.id", ondelete="CASCADE"), nullable=False)
 
     supplier_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
 

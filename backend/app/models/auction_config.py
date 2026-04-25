@@ -10,7 +10,7 @@ class AuctionConfig(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
-    rfq_id = Column(UUID(as_uuid=True), ForeignKey("rfqs.id"), nullable=False, unique=True)
+    rfq_id = Column(UUID(as_uuid=True), ForeignKey("rfqs.id", ondelete="CASCADE"), nullable=False, unique=True)
 
     # X minutes before close when trigger activates
     trigger_window_minutes = Column(Integer, nullable=False)
