@@ -13,7 +13,7 @@ from app.models.bid import Bid
 from app.schemas.rfq import AuctionConfigCreate, RFQCreate, RFQResponse
 from app.auth import get_current_user
 from app.models.user import User
-from sqlalchemy import delete
+from sqlalchemy import delete, desc
 
 router = APIRouter()
 
@@ -41,6 +41,7 @@ def build_rfq_response(rfq: RFQ, config: AuctionConfig) -> dict:
         "is_british_auction": rfq.is_british_auction,
         "status": rfq.status,
         "created_at": rfq.created_at,
+        "current_lowest_bid": rfq.current_lowest_bid if hasattr(rfq, "current_lowest_bid") else None,
         "auction_config": config,
     }
 
@@ -72,8 +73,8 @@ async def create_rfq(rfq_in: RFQCreate, current_user: User = Depends(get_current
 
     if bid_close_time <= bid_start_time:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="bid_close_time must be after bid_start_time")
-    if forced_bid_close_time < bid_close_time:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="forced_bid_close_time must be after bid_close_time")
+    if forced_bid_close_time <= bid_close_time:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="forced_bid_close_time must be later than bid_close_time")
 
     pickup_service_date = _normalize_datetime(rfq_in.pickup_service_date)
     rfq = RFQ(
@@ -133,7 +134,38 @@ async def read_rfq(rfq_id: str, current_user: User = Depends(get_current_user), 
     if not config:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Auction configuration missing")
 
+    # Fetch lowest bid
+    bid_result = await db.execute(
+        select(Bid).where(Bid.rfq_id == rfq.id, Bid.is_active == True).order_by(Bid.total_amount.asc()).limit(1)
+    )
+    lowest_bid = bid_result.scalar_one_or_none()
+    rfq.current_lowest_bid = float(lowest_bid.total_amount) if lowest_bid else None
+
     return build_rfq_response(rfq, config)
+
+
+@router.get("/rfq", response_model=list[RFQResponse])
+async def list_rfqs(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    # Simple list for now, can be optimized
+    result = await db.execute(select(RFQ).order_by(desc(RFQ.created_at)))
+    rfqs = result.scalars().all()
+    
+    responses = []
+    for rfq in rfqs:
+        await _close_rfq_if_expired(rfq, db)
+        config_result = await db.execute(select(AuctionConfig).where(AuctionConfig.rfq_id == rfq.id))
+        config = config_result.scalar_one_or_none()
+        
+        bid_result = await db.execute(
+            select(Bid).where(Bid.rfq_id == rfq.id, Bid.is_active == True).order_by(Bid.total_amount.asc()).limit(1)
+        )
+        lowest_bid = bid_result.scalar_one_or_none()
+        rfq.current_lowest_bid = float(lowest_bid.total_amount) if lowest_bid else None
+        
+        if config:
+            responses.append(build_rfq_response(rfq, config))
+            
+    return responses
 
 
 @router.delete("/rfq/{rfq_id}", status_code=204)
@@ -154,3 +186,28 @@ async def delete_rfq(rfq_id: str, current_user: User = Depends(get_current_user)
     await db.execute(delete(RFQ).where(RFQ.id == rfq.id))
 
     await db.commit()
+
+@router.get("/rfq/{rfq_id}/activity", response_model=list[dict])
+async def list_rfq_activity(rfq_id: str, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    rfq = await _get_rfq_by_identifier(rfq_id, db)
+    if not rfq:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="RFQ not found")
+
+    result = await db.execute(
+        select(ActivityLog)
+        .where(ActivityLog.rfq_id == rfq.id)
+        .order_by(desc(ActivityLog.created_at))
+    )
+    logs = result.scalars().all()
+    return [
+        {
+            "id": str(log.id),
+            "event_type": log.event_type,
+            "description": log.description,
+            "extension_reason": log.extension_reason,
+            "new_close_time": log.new_close_time.isoformat() + "Z" if log.new_close_time else None,
+            "triggered_by_supplier_id": str(log.triggered_by_supplier_id) if log.triggered_by_supplier_id else None,
+            "created_at": log.created_at.isoformat() + "Z",
+        }
+        for log in logs
+    ]
