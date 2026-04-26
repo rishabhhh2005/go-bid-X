@@ -99,7 +99,23 @@ A comprehensive and Git-friendly breakdown of the database schema (Users, RFQs, 
 - **Python** (3.10+ recommended)
 - **PostgreSQL** (A remote Neon Postgres URL is pre-configured in `.env` for convenience)
 
-### 2. Backend Setup
+### 2. Environment Configuration
+Create environment files for both backend and frontend.
+
+**Backend (.env in backend/ directory):**
+```env
+DATABASE_URL=postgresql://username:password@host:port/database
+SECRET_KEY=your-secret-key-here
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+FRONTEND_URL=http://localhost:5173
+```
+
+**Frontend (.env in frontend/ directory):**
+```env
+VITE_API_URL=http://localhost:8000
+```
+
+### 3. Backend Setup
 Navigate to the `backend` directory and set up the Python environment:
 
 ```bash
@@ -124,7 +140,7 @@ uvicorn app.main:app --reload
 ```
 The backend will run at `http://localhost:8000`. You can view the interactive API documentation at `http://localhost:8000/docs`.
 
-### 3. Frontend Setup
+### 4. Frontend Setup
 Open a new terminal window, navigate to the `frontend` directory, and install dependencies:
 
 ```bash
