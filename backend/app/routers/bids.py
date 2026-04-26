@@ -2,7 +2,8 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, update
+from sqlalchemy import select, update, func
+from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
@@ -123,7 +124,6 @@ async def _maybe_extend_auction(
 
     # Check max extensions
     if config.max_extensions is not None:
-        from sqlalchemy import func
         result = await db.execute(
             select(func.count(ActivityLog.id))
             .where(ActivityLog.rfq_id == rfq.id, ActivityLog.event_type == "time_extended")
@@ -298,7 +298,6 @@ async def place_bid(bid_in: BidCreate, current_user: User = Depends(get_current_
     await db.commit()
     
     # Re-fetch with supplier joined to ensure _build_bid_response has what it needs
-    from sqlalchemy.orm import joinedload
     result = await db.execute(
         select(Bid).options(joinedload(Bid.supplier)).where(Bid.id == bid.id)
     )
@@ -349,7 +348,6 @@ async def list_bids(rfq_id: str, current_user: User = Depends(get_current_user),
     if not rfq:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="RFQ not found")
 
-    from sqlalchemy.orm import joinedload
     result = await db.execute(
         select(Bid)
         .options(joinedload(Bid.supplier))

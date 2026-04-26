@@ -31,19 +31,24 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 @router.websocket("/ws/rfq/{rfq_id}")
 async def rfq_websocket(rfq_id: str, websocket: WebSocket):
-    print(f"DEBUG: WebSocket connection attempt for RFQ: {rfq_id}")
+    logger.info(f"WebSocket connection attempt for RFQ: {rfq_id}")
     await websocket.accept()
-    print(f"DEBUG: WebSocket connection accepted for RFQ: {rfq_id}")
+    logger.info(f"WebSocket connection accepted for RFQ: {rfq_id}")
     await manager.connect(rfq_id, websocket)
     try:
         while True:
             # Keep the connection open
             data = await websocket.receive_text()
     except WebSocketDisconnect:
-        print(f"DEBUG: WebSocket disconnected for RFQ: {rfq_id}")
+        logger.info(f"WebSocket disconnected for RFQ: {rfq_id}")
         manager.disconnect(rfq_id, websocket)
     except Exception as e:
-        print(f"DEBUG: WebSocket error: {e}")
+        logger.error(f"WebSocket error: {e}")
         manager.disconnect(rfq_id, websocket)
