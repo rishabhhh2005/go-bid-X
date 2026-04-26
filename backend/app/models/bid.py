@@ -3,6 +3,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime
 import uuid
 
+from sqlalchemy.orm import relationship
 from app.database import Base
 
 
@@ -10,10 +11,11 @@ class Bid(Base):
     __tablename__ = "bids"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-
+    
     rfq_id = Column(UUID(as_uuid=True), ForeignKey("rfqs.id", ondelete="CASCADE"), nullable=False)
-
+    
     supplier_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    supplier = relationship("User")
 
     carrier_name = Column(String(255), nullable=False)
 

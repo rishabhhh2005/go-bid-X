@@ -39,6 +39,8 @@ class BidResponse(BaseModel):
     rank: Optional[int] = None
     is_active: bool
     submitted_at: datetime
+    supplier_email: Optional[str] = None
+    supplier_name: Optional[str] = None
 
     class Config:
         from_attributes = True

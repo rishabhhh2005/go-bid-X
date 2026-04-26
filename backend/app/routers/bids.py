@@ -25,7 +25,11 @@ def _normalize_datetime(value: datetime) -> datetime:
 
 
 def _build_bid_response(bid: Bid) -> BidResponse:
-    return BidResponse.from_orm(bid)
+    response = BidResponse.from_orm(bid)
+    if bid.supplier:
+        response.supplier_email = bid.supplier.email
+        response.supplier_name = bid.supplier.full_name
+    return response
 
 
 async def _refresh_rfq_status(rfq: RFQ, db: AsyncSession) -> None:
@@ -70,12 +74,22 @@ async def _close_rfq_if_expired(rfq: RFQ, db: AsyncSession) -> None:
 
 
 async def _apply_rank_updates(rfq_id: UUID, db: AsyncSession) -> None:
+    # First, clear ranks for ALL bids of this RFQ to ensure no stale data
+    await db.execute(
+        update(Bid).where(Bid.rfq_id == rfq_id).values(rank=None)
+    )
+    await db.flush()
+    
+    # Then, rank only active bids
     result = await db.execute(
-        select(Bid).where(Bid.rfq_id == rfq_id, Bid.is_active == True).order_by(Bid.total_amount.asc(), Bid.submitted_at.asc())
+        select(Bid)
+        .where(Bid.rfq_id == rfq_id, Bid.is_active == True)
+        .order_by(Bid.total_amount.asc(), Bid.submitted_at.asc())
     )
     active_bids = result.scalars().all()
     for rank, bid in enumerate(active_bids, start=1):
         bid.rank = rank
+    await db.flush()
 
 
 async def _maybe_extend_auction(
@@ -86,12 +100,15 @@ async def _maybe_extend_auction(
     rank_changed: bool = False,
     l1_changed: bool = False
 ) -> bool:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     if not config or config.trigger_window_minutes <= 0:
         return False
 
-    trigger_time = rfq.current_bid_close_time - timedelta(minutes=config.trigger_window_minutes)
-    if now < trigger_time or rfq.current_bid_close_time >= rfq.forced_bid_close_time:
+    current_close = _normalize_datetime(rfq.current_bid_close_time)
+    forced_close = _normalize_datetime(rfq.forced_bid_close_time)
+    
+    trigger_time = current_close - timedelta(minutes=config.trigger_window_minutes)
+    if now < trigger_time or current_close >= forced_close:
         return False
 
     # Check trigger condition
@@ -111,11 +128,11 @@ async def _maybe_extend_auction(
     if not should_extend:
         return False
 
-    new_close_time = rfq.current_bid_close_time + timedelta(minutes=config.extension_duration_minutes)
-    if new_close_time > rfq.forced_bid_close_time:
-        new_close_time = rfq.forced_bid_close_time
+    new_close_time = current_close + timedelta(minutes=config.extension_duration_minutes)
+    if new_close_time > forced_close:
+        new_close_time = forced_close
 
-    if new_close_time > rfq.current_bid_close_time:
+    if new_close_time > current_close:
         rfq.current_bid_close_time = new_close_time
         log = ActivityLog(
             rfq_id=rfq.id,
@@ -154,12 +171,12 @@ async def place_bid(bid_in: BidCreate, current_user: User = Depends(get_current_
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="RFQ not found")
 
     await _close_rfq_if_expired(rfq, db)
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     bid_start_time = _normalize_datetime(rfq.bid_start_time)
     current_close_time = _normalize_datetime(rfq.current_bid_close_time)
 
     if rfq.status != "active":
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="RFQ is not active")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"RFQ is not active (current status: {rfq.status})")
     if now < bid_start_time:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="RFQ bidding has not started yet")
     if now >= current_close_time:
@@ -177,12 +194,18 @@ async def place_bid(bid_in: BidCreate, current_user: User = Depends(get_current_
         if b.rank == 1:
             old_l1_supplier_id = b.supplier_id
 
-    # Deactivate previous bid from this supplier
-    await db.execute(
-        update(Bid)
-        .where(Bid.rfq_id == rfq.id, Bid.supplier_id == current_user.id, Bid.is_active == True)
-        .values(is_active=False)
+    # Deactivate previous bids from this supplier
+    stmt = select(Bid).where(
+        Bid.rfq_id == rfq.id, 
+        Bid.supplier_id == current_user.id, 
+        Bid.is_active == True
     )
+    existing_supplier_bids = (await db.execute(stmt)).scalars().all()
+    for b in existing_supplier_bids:
+        b.is_active = False
+        b.rank = None
+    
+    await db.flush()
 
     # Add new bid
     bid = Bid(
@@ -285,6 +308,12 @@ async def list_bids(rfq_id: str, current_user: User = Depends(get_current_user),
     if not rfq:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="RFQ not found")
 
-    result = await db.execute(select(Bid).where(Bid.rfq_id == rfq.id).order_by(Bid.total_amount.asc(), Bid.submitted_at.asc()))
+    from sqlalchemy.orm import joinedload
+    result = await db.execute(
+        select(Bid)
+        .options(joinedload(Bid.supplier))
+        .where(Bid.rfq_id == rfq.id)
+        .order_by(Bid.rank.asc().nullslast(), Bid.total_amount.asc(), Bid.submitted_at.asc())
+    )
     bids = result.scalars().all()
     return [_build_bid_response(bid) for bid in bids]
