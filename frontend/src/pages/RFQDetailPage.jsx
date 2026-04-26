@@ -80,9 +80,10 @@ export default function RFQDetailPage() {
   useEffect(() => {
     if (!id) return
     
-    // Connect using the explicit IP to avoid localhost resolution issues
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl = `${protocol}//127.0.0.1:8000/ws/rfq/${id}`
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
+    const host = apiUrl.replace(/^https?:\/\//, '')
+    const wsUrl = `${protocol}//${host}/ws/rfq/${id}`
     const ws = new WebSocket(wsUrl)
 
     ws.onopen = () => console.log('WebSocket connected to', wsUrl)

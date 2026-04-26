@@ -11,7 +11,6 @@ const defaultForm = {
   bid_close_time: '',
   forced_bid_close_time: '',
   pickup_service_date: '',
-  carrier_name: '',
   is_british_auction: false,
   trigger_window_minutes: 5,
   extension_duration_minutes: 10,
