@@ -16,6 +16,7 @@
 - **Safety Limits**: Built-in maximum extension counts (`max_extensions`) and hard `forced_bid_close_time` guarantees auctions will always conclude.
 
 ### 📊 Real-Time Bidding & Ranking
+- Real-time WebSocket integration for live bid board updates without page reloads.
 - Dynamic calculation of supplier rankings (L1, L2, L3) based on total bid amounts.
 - Comprehensive audit trails via the **Activity Log**, recording all bids, extensions, and automated closures.
 
@@ -34,6 +35,7 @@
 
 **Backend:**
 - FastAPI (High-performance Python web framework)
+- WebSockets (for real-time bid and status updates)
 - SQLAlchemy (ORM) & PostgreSQL (Neon Serverless DB)
 - Alembic (Database Migrations)
 - JWT (JSON Web Tokens) for secure authentication
