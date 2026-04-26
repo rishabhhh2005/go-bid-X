@@ -20,6 +20,11 @@
 - Dynamic calculation of supplier rankings (L1, L2, L3) based on total bid amounts.
 - Comprehensive audit trails via the **Activity Log**, recording all bids, extensions, and automated closures.
 
+### 🎨 Premium UI/UX
+- **Glassmorphism Design**: Sleek, modern interface with frosted glass effects and depth.
+- **Dynamic Animations**: Smooth transitions and micro-interactions for a polished feel.
+- **Responsive Layouts**: Fully optimized for all screen sizes from mobile to ultra-wide.
+
 ### ⚙️ Automated Background Processing
 - A background scheduler continuously polls the database, automatically moving expired RFQs to `closed` or `force_closed` states without requiring manual intervention.
 
@@ -28,10 +33,11 @@
 ## 🛠️ Technology Stack
 
 **Frontend:**
-- React 18 & Vite
-- Tailwind CSS (for modern, responsive styling)
+- React 19 & Vite 8
+- Tailwind CSS 3 (Premium Glassmorphism Design)
+- Modern Typography (Inter & Outfit)
 - Context API (for state management)
-- React Router DOM
+- React Router DOM 6
 
 **Backend:**
 - FastAPI (High-performance Python web framework)
@@ -47,29 +53,33 @@
 
 ```text
 GoBidX/
-├── backend/                  # FastAPI Application
+├── backend/                        # FastAPI Application
 │   ├── app/                  
-│   │   ├── models/           # SQLAlchemy Database Models
-│   │   ├── routers/          # API Route Definitions
-│   │   ├── schemas/          # Pydantic validation schemas
-│   │   ├── database.py       # DB connection & session management
-│   │   ├── main.py           # Application entry point & scheduler
-│   │   └── security.py       # JWT and Password Hashing
-│   ├── alembic/              # Migration Scripts
-│   └── requirements.txt      # Python dependencies
-├── frontend/                 # React Application
+│   │   ├── models/                 # SQLAlchemy Database Models
+│   │   ├── routers/                # API Route Definitions
+│   │   ├── schemas/                # Pydantic validation schemas
+│   │   ├── database.py             # DB connection & session management
+│   │   ├── main.py                 # Application entry point & scheduler
+│   │   └── security.py             # JWT and Password Hashing
+│   ├── alembic/                    # Migration Scripts
+│   └── requirements.txt            # Python dependencies
+├── frontend/                       # React 19 Application
 │   ├── src/
-│   │   ├── components/       # Reusable UI components
-│   │   ├── context/          # Global state (AuthContext)
-│   │   ├── pages/            # Page-level components
-│   │   ├── services/         # API integration (Axios)
-│   │   └── App.jsx           # Root layout and routing
-│   ├── package.json          # Node dependencies
-│   └── tailwind.config.js    # Tailwind theme configuration
-├── Full_Schema_Design.md     # Detailed Database Schema Design
-├── HLD.png                   # High-Level Design Diagram
-├── Schema_Design.png         # Schema Design Image
-└── README.md                 # Project Documentation
+│   │   ├── components/             # Reusable UI components
+│   │   ├── context/                # Global state (AuthContext)
+│   │   ├── pages/                  # Page-level components
+│   │   ├── services/               # API integration (Axios)
+│   │   ├── index.css               # Premium design system (Glassmorphism)
+│   │   └── App.jsx                 # Root layout and routing
+│   ├── package.json                # Node dependencies
+│   └── tailwind.config.js          # Tailwind theme configuration
+├── Schema Design/                  # Database Documentation
+│   ├── Full_Schema_Design.md       # Detailed DB Design
+│   └── Schema_Design.png           # Schema Image
+├── HLD and Architecture Diagram/   # High-Level Architecture
+│   ├── HLD.png                     # HLD Image
+│   └── Architecture_Diagram.png    # Architecture Diagram
+└── README.md                       # Project Documentation
 ```
 
 ---
@@ -78,7 +88,7 @@ GoBidX/
 
 A comprehensive and Git-friendly breakdown of the database schema (Users, RFQs, Auction Configs, Bids, and Activity Logs) is available in the root directory. 
 
-👉 **[View Full Schema Design Here](./Full_Schema_Design.md)**
+👉 **[View Full Schema Design Here](./Schema%20Design/Full_Schema_Design.md)**
 
 ---
 

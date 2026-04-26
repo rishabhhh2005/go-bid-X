@@ -4,19 +4,21 @@ This is the frontend application for **GoBidX**, a modern, full-stack Request fo
 
 ## 🚀 Technology Stack
 
-- **React 18**: Frontend library for building user interfaces.
-- **Vite**: Next-generation frontend tooling for fast development and building.
-- **Tailwind CSS**: Utility-first CSS framework for rapid and responsive styling.
-- **React Router DOM**: Client-side routing.
-- **Context API**: Global state management (Authentication).
+- **React 19**: Latest frontend library for building modern user interfaces.
+- **Vite 8**: Next-generation lightning-fast frontend tooling.
+- **Tailwind CSS 3**: Utility-first CSS framework enhanced with a custom **Glassmorphism Design System**.
+- **React Router DOM 6**: Seamless client-side routing.
+- **Context API**: Global state management for authentication and user sessions.
 - **WebSockets**: Native browser WebSockets for real-time live bid board updates and dynamic auction extensions.
 
 ## ✨ Key Features
 
-- **Role-Based Dashboards**: Distinct interfaces for `buyers` (RFQ creation and monitoring) and `suppliers` (bidding and live ranking).
+- **Role-Based Dashboards**: Distinct, premium interfaces for `buyers` (RFQ creation and monitoring) and `suppliers` (bidding and live ranking).
 - **Live Bid Board**: Real-time WebSocket connection displaying active bids and automated RFQ status updates without requiring a page refresh.
+- **Glassmorphism UI**: High-end aesthetics featuring frosted glass panels, depth effects, and a refined color palette.
+- **Micro-Animations**: Smooth fade-ins, hover effects, and loading states powered by CSS transitions and Tailwind utility classes.
 - **Dynamic Auction Notifications**: Visual cues and alerts when an auction is automatically extended or falls within the trigger window limit.
-- **Responsive Design**: Fully optimized for desktop and mobile displays using modern design aesthetics and Tailwind CSS.
+- **Responsive Design**: Fully optimized for desktop, tablet, and mobile displays.
 
 ## 🛠️ Setup Instructions
 
