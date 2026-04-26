@@ -38,6 +38,23 @@ export default function RFQDetailPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [showExtensionAlert, setShowExtensionAlert] = useState(false)
+  const [currentTime, setCurrentTime] = useState(new Date())
+  const [expandedBidIds, setExpandedBidIds] = useState(new Set())
+
+  const toggleBidExpansion = (bidId) => {
+    setExpandedBidIds((current) => {
+      const next = new Set(current)
+      if (next.has(bidId)) next.delete(bidId)
+      else next.add(bidId)
+      return next
+    })
+  }
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
 
   useEffect(() => {
     const loadData = async () => {
@@ -92,6 +109,11 @@ export default function RFQDetailPage() {
               return { ...current, current_bid_close_time: message.current_bid_close_time }
             })
           }
+
+          if (message.extended) {
+            setShowExtensionAlert(true)
+            setTimeout(() => setShowExtensionAlert(false), 5000)
+          }
         }
       } catch (err) {
         console.error('Error processing WebSocket message:', err)
@@ -106,6 +128,21 @@ export default function RFQDetailPage() {
   const canSubmitBid = useMemo(() => {
     return user?.role === 'supplier' && rfq?.status === 'active'
   }, [user, rfq])
+
+  const isInTriggerWindow = useMemo(() => {
+    if (!rfq || !rfq.auction_config || rfq.status !== 'active') return false
+    const closeTime = parseUtcDate(rfq.current_bid_close_time)
+    if (!closeTime) return false
+    const triggerTime = new Date(closeTime.getTime() - rfq.auction_config.trigger_window_minutes * 60000)
+    return currentTime >= triggerTime && currentTime < closeTime
+  }, [rfq, currentTime])
+
+  const isAtForcedLimit = useMemo(() => {
+    if (!rfq) return false
+    const currentClose = parseUtcDate(rfq.current_bid_close_time)
+    const forcedClose = parseUtcDate(rfq.forced_bid_close_time)
+    return currentClose && forcedClose && currentClose.getTime() >= forcedClose.getTime()
+  }, [rfq])
 
   const handleBidChange = (key) => (event) => {
     setBidData((current) => ({ ...current, [key]: event.target.value }))
@@ -162,6 +199,28 @@ export default function RFQDetailPage() {
           </button>
           <h1 className="text-3xl font-semibold text-slate-900">RFQ details</h1>
         </div>
+
+        {showExtensionAlert && (
+          <div className="fixed top-6 right-6 z-50 animate-bounce rounded-2xl bg-amber-500 p-4 text-white shadow-2xl ring-4 ring-amber-200">
+            <p className="flex items-center gap-2 font-bold">
+              <span className="text-2xl">⏳</span>
+              AUCTION EXTENDED! New bids in trigger window.
+            </p>
+          </div>
+        )}
+
+        {isInTriggerWindow && (
+          <div className={`rounded-3xl p-6 text-center shadow-lg ring-4 ${isAtForcedLimit ? 'bg-red-600 text-white ring-red-200 animate-pulse' : 'bg-amber-100 text-amber-900 ring-amber-200'}`}>
+            <h2 className="text-xl font-bold uppercase tracking-wider">
+              {isAtForcedLimit ? '🚨 FORCED BID CLOSE TIMELINE 🚨' : '⚡ TRIGGER WINDOW ACTIVE ⚡'}
+            </h2>
+            <p className="mt-2 text-sm opacity-90">
+              {isAtForcedLimit 
+                ? 'The auction has reached its maximum extension limit. No further extensions possible.' 
+                : 'Bids placed now will extend the auction duration!'}
+            </p>
+          </div>
+        )}
 
         {loading ? (
           <div className="rounded-3xl bg-white p-8 text-center text-slate-600 shadow-sm ring-1 ring-slate-200">Loading auction data…</div>
@@ -247,31 +306,68 @@ export default function RFQDetailPage() {
                 ) : (
                   bids
                     .slice()
-                    .sort((a, b) => (a.rank || 999) - (b.rank || 999))
-                    .map((bid) => (
-                      <div key={bid.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold text-slate-900">{bid.carrier_name || 'Supplier'}</p>
-                            <p className="mt-1 text-sm text-slate-600">Supplier ID: {bid.supplier_id}</p>
-                          </div>
-                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-slate-600">{bid.rank ? `L${bid.rank}` : 'L–'}</span>
+                    .sort((a, b) => {
+                      // Active bids first
+                      if (a.is_active && !b.is_active) return -1
+                      if (!a.is_active && b.is_active) return 1
+                      // Then by rank if active
+                      if (a.is_active && b.is_active) {
+                        if (a.rank && b.rank) return a.rank - b.rank
+                        if (a.rank) return -1
+                        if (b.rank) return 1
+                      }
+                      // Then by newest first
+                      return new Date(b.submitted_at) - new Date(a.submitted_at)
+                    })
+                    .map((bid) => {
+                      const isExpanded = expandedBidIds.has(bid.id)
+                      return (
+                        <div key={bid.id} className={`rounded-3xl border transition-all ${bid.is_active ? 'border-sky-200 bg-white shadow-sm ring-1 ring-sky-50' : 'border-slate-200 bg-slate-50 opacity-80'}`}>
+                          <button 
+                            onClick={() => toggleBidExpansion(bid.id)}
+                            className="flex w-full items-center justify-between gap-4 p-4 text-left"
+                          >
+                            <div className="flex flex-col gap-1">
+                              <p className="text-sm font-semibold text-slate-900">
+                                "{bid.supplier_name || 'Supplier'}" ({bid.supplier_email || 'no email'}) submitted a bid
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {bid.is_active ? (
+                                  <span className="font-bold text-sky-600">ACTIVE BID</span>
+                                ) : (
+                                  <span className="italic">Superseded</span>
+                                )} 
+                                • {formatLabel(bid.submitted_at)}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {bid.rank && (
+                                <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-700">L{bid.rank}</span>
+                              )}
+                              <span className="text-lg font-bold text-slate-900">${bid.total_amount?.toLocaleString()}</span>
+                              <span className={`text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
+                            </div>
+                          </button>
+                          
+                          {isExpanded && (
+                            <div className="border-t border-slate-100 p-4 pt-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                              <div className="grid gap-4 sm:grid-cols-2 text-sm text-slate-700">
+                                <div>
+                                  <p className="font-semibold text-slate-900">Carrier: {bid.carrier_name}</p>
+                                  <p className="mt-1">Transit: {bid.transit_time_days ? `${bid.transit_time_days} days` : 'N/A'}</p>
+                                  <p>Validity: {bid.quote_validity_date ? formatLabel(bid.quote_validity_date).split(',')[0] : 'N/A'}</p>
+                                </div>
+                                <div className="grid gap-1 text-xs text-slate-500">
+                                  <p>Freight Charges: ${bid.freight_charges}</p>
+                                  <p>Origin Charges: ${bid.origin_charges}</p>
+                                  <p>Destination Charges: ${bid.destination_charges}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        <div className="mt-3 grid gap-3 sm:grid-cols-2 text-sm text-slate-700">
-                          <p className="font-bold text-sky-600">Total: ${bid.total_amount != null ? bid.total_amount.toLocaleString() : '–'}</p>
-                          <p>Submitted: {bid.submitted_at ? formatLabel(bid.submitted_at) : '–'}</p>
-                        </div>
-                        <div className="mt-2 grid gap-2 sm:grid-cols-3 text-xs text-slate-500">
-                          <p>Freight: ${bid.freight_charges}</p>
-                          <p>Origin: ${bid.origin_charges}</p>
-                          <p>Dest: ${bid.destination_charges}</p>
-                        </div>
-                        <div className="mt-2 flex gap-4 text-xs text-slate-600 border-t border-slate-100 pt-2">
-                           <p>Transit: {bid.transit_time_days ? `${bid.transit_time_days} days` : 'N/A'}</p>
-                           <p>Validity: {bid.quote_validity_date ? formatLabel(bid.quote_validity_date).split(',')[0] : 'N/A'}</p>
-                        </div>
-                      </div>
-                    ))
+                      )
+                    })
                 )}
               </div>
 
