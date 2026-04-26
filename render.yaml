@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: gobidx-backend
+    runtime: python
+    runtimeVersion: 3.12
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        scope: run
+      - key: SECRET_KEY
+        scope: run
