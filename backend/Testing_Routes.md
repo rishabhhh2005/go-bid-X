@@ -81,7 +81,8 @@ Copy the `access_token` from the response.
   "auction_config": {
     "trigger_window_minutes": 5,
     "extension_duration_minutes": 5,
-    "extension_trigger_type": "bid_received"
+    "extension_trigger_type": "bid_received",
+    "max_extensions": 3
   }
 }
 ```
@@ -126,16 +127,31 @@ Copy the `rfq_id` from the response.
 
 Returns all bids sorted by `total_amount` in ascending order (lowest bid first).
 
+---
+
+## 9) Get RFQ Activity Log
+
+**Route:** `GET /rfq/{rfq_id}/activity`
+**Token:** Required
+
+Returns a history of all events related to the RFQ, including creation, activation (now logged as `auction_activated`), bids, extensions, and closing.
+
 
 
 ---
 
-## 9) Delete RFQ (Cleanup)
+## 10) Delete RFQ (Cleanup)
 
 **Route:** `DELETE /rfq/{rfq_id}`
 **Token:** Buyer only
 
 Only the RFQ creator is allowed to delete it.
+
+---
+
+## 11) Background Status Scheduler
+
+The backend now includes a background task that polls for and closes expired RFQs every minute. You don't need to manually trigger a status refresh via HTTP requests anymore; the state will transition automatically in the background and broadcast via WebSockets.
 
 ---
 
