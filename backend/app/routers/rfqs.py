@@ -218,14 +218,25 @@ async def list_rfqs(current_user: User = Depends(get_current_user), db: AsyncSes
     lowest_bids = {row.rfq_id: row.min_bid for row in bid_result}
 
     responses = []
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     for rfq in rfqs:
-        # Note: We don't call _refresh_rfq_status here to keep it fast.
-        # Status is usually updated when viewing a specific RFQ or on bid submission.
+        # Compute effective status for the response without necessarily writing to DB
+        # This fixes the dashboard showing 'draft' when it should be 'active'
+        effective_status = rfq.status
+        bid_start = _normalize_datetime(rfq.bid_start_time)
+        bid_close = _normalize_datetime(rfq.current_bid_close_time)
         
+        if rfq.status == "draft" and now >= bid_start and now < bid_close:
+            effective_status = "active"
+        elif rfq.status == "active" and now >= bid_close:
+            effective_status = "closed"
+            
         rfq.current_lowest_bid = float(lowest_bids[rfq.id]) if rfq.id in lowest_bids else None
         
-        # auction_config is already loaded due to selectinload
-        responses.append(build_rfq_response(rfq, getattr(rfq, 'auction_config', None)))
+        # Build response with effective status
+        response_data = build_rfq_response(rfq, getattr(rfq, 'auction_config', None))
+        response_data["status"] = effective_status
+        responses.append(response_data)
             
     return responses
 

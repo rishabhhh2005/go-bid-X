@@ -182,6 +182,20 @@ async def place_bid(bid_in: BidCreate, current_user: User = Depends(get_current_
     if now >= current_close_time:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="RFQ bidding is closed")
 
+    # Check if supplier already has a lower bid. In a reverse auction, you should only bid lower.
+    existing_stmt = select(Bid).where(
+        Bid.rfq_id == rfq.id,
+        Bid.supplier_id == current_user.id,
+        Bid.is_active == True
+    )
+    existing_bids = (await db.execute(existing_stmt)).scalars().all()
+    for eb in existing_bids:
+        if bid_in.total_amount >= eb.total_amount:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"You already have a lower or equal bid of ${eb.total_amount}. New bids must be lower than your current best offer."
+            )
+
     # Capture state before new bid
     old_l1_supplier_id = None
     old_ranks = {}
@@ -261,7 +275,13 @@ async def place_bid(bid_in: BidCreate, current_user: User = Depends(get_current_
     db.add(bid_log)
 
     await db.commit()
-    await db.refresh(bid)
+    
+    # Re-fetch with supplier joined to ensure _build_bid_response has what it needs
+    from sqlalchemy.orm import joinedload
+    result = await db.execute(
+        select(Bid).options(joinedload(Bid.supplier)).where(Bid.id == bid.id)
+    )
+    bid = result.scalar_one()
     await db.refresh(rfq)
 
     update_result = await db.execute(
