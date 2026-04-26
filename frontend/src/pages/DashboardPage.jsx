@@ -149,7 +149,7 @@ export default function DashboardPage() {
                       </div>
                       
                       <div className="flex flex-wrap items-center gap-3 shrink-0">
-                        {user?.role === 'buyer' && (
+                        {user?.role === 'buyer' && user?.id === rfq.buyer_id && (
                           <button
                             type="button"
                             onClick={() => handleDelete(rfq.id)}

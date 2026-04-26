@@ -90,7 +90,9 @@ export default function RegisterPage() {
                 required
                 placeholder="••••••••"
                 className="input-field"
+                minLength="8"
               />
+              <p className="text-xs text-slate-500 mt-1">Minimum 8 characters required</p>
             </div>
           </div>
 
