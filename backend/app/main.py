@@ -13,17 +13,22 @@ from app.routers.ws import router as ws_router
 async def _keep_db_alive():
     """Ping Neon every 4 minutes so the compute never auto-suspends."""
     while True:
+        await asyncio.sleep(4 * 60)   # Wait FIRST, ping after
         try:
             async with engine.connect() as conn:
                 await conn.execute(text("SELECT 1"))
-            # print("[keep-alive] DB ping successful")
         except Exception as e:
             print(f"[keep-alive] DB ping failed: {e}")
-        
-        await asyncio.sleep(4 * 60)          # Wait 4 minutes after a ping
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Warm up immediately on start
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+    except Exception as e:
+        print(f"[startup] DB warm-up failed: {e}")
+    
     # Start the keep-alive task
     task = asyncio.create_task(_keep_db_alive())
     yield

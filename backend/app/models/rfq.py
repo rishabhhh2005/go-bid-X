@@ -36,3 +36,7 @@ class RFQ(Base):
     )
 
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationship
+    from sqlalchemy.orm import relationship
+    auction_config = relationship("AuctionConfig", back_populates="rfq", uselist=False, cascade="all, delete-orphan")

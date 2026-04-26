@@ -196,24 +196,36 @@ async def read_rfq(rfq_id: str, current_user: User = Depends(get_current_user), 
 
 @router.get("/rfq", response_model=list[RFQResponse])
 async def list_rfqs(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    # Get all RFQs
-    result = await db.execute(select(RFQ).order_by(desc(RFQ.created_at)))
+    from sqlalchemy.orm import selectinload
+    from sqlalchemy import func
+
+    # Get all RFQs with their auction_config in ONE query (selectinload)
+    result = await db.execute(
+        select(RFQ)
+        .options(selectinload(RFQ.auction_config))
+        .order_by(desc(RFQ.created_at))
+    )
     rfqs = result.scalars().all()
     
+    # Get lowest bids for ALL rfqs in ONE query
+    subq = (
+        select(Bid.rfq_id, func.min(Bid.total_amount).label("min_bid"))
+        .where(Bid.is_active == True)
+        .group_by(Bid.rfq_id)
+        .subquery()
+    )
+    bid_result = await db.execute(select(subq))
+    lowest_bids = {row.rfq_id: row.min_bid for row in bid_result}
+
     responses = []
     for rfq in rfqs:
-        # Avoid closing in the loop if possible, or at least minimize the impact
-        # For now, let's just fetch the related data efficiently
-        config_result = await db.execute(select(AuctionConfig).where(AuctionConfig.rfq_id == rfq.id))
-        config = config_result.scalar_one_or_none()
+        # Note: We don't call _refresh_rfq_status here to keep it fast.
+        # Status is usually updated when viewing a specific RFQ or on bid submission.
         
-        bid_result = await db.execute(
-            select(Bid).where(Bid.rfq_id == rfq.id, Bid.is_active == True).order_by(Bid.total_amount.asc()).limit(1)
-        )
-        lowest_bid = bid_result.scalar_one_or_none()
-        rfq.current_lowest_bid = float(lowest_bid.total_amount) if lowest_bid else None
+        rfq.current_lowest_bid = float(lowest_bids[rfq.id]) if rfq.id in lowest_bids else None
         
-        responses.append(build_rfq_response(rfq, config))
+        # auction_config is already loaded due to selectinload
+        responses.append(build_rfq_response(rfq, getattr(rfq, 'auction_config', None)))
             
     return responses
 

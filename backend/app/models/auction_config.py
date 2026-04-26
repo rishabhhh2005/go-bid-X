@@ -31,3 +31,7 @@ class AuctionConfig(Base):
 
     # Optional safety limit
     max_extensions = Column(Integer, default=999)
+
+    # Relationship
+    from sqlalchemy.orm import relationship
+    rfq = relationship("RFQ", back_populates="auction_config")
