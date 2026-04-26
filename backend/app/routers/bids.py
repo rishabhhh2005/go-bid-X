@@ -43,7 +43,7 @@ async def _refresh_rfq_status(rfq: RFQ, db: AsyncSession) -> None:
         updated = True
         log = ActivityLog(
             rfq_id=rfq.id,
-            event_type="bid_submitted", 
+            event_type="auction_activated", 
             description="RFQ moved from draft to active status.",
         )
         db.add(log)
@@ -68,6 +68,16 @@ async def _refresh_rfq_status(rfq: RFQ, db: AsyncSession) -> None:
     if updated:
         await db.commit()
         await db.refresh(rfq)
+        
+        # Broadcast status change
+        message = {
+            "event": "status_changed",
+            "rfq_id": str(rfq.id),
+            "status": rfq.status,
+            "current_bid_close_time": rfq.current_bid_close_time.isoformat() + "Z" if rfq.current_bid_close_time.tzinfo is None else rfq.current_bid_close_time.isoformat(),
+        }
+        await manager.broadcast(str(rfq.id), message)
+        await manager.broadcast(rfq.reference_id, message)
 
 async def _close_rfq_if_expired(rfq: RFQ, db: AsyncSession) -> None:
     await _refresh_rfq_status(rfq, db)
@@ -110,6 +120,17 @@ async def _maybe_extend_auction(
     trigger_time = current_close - timedelta(minutes=config.trigger_window_minutes)
     if now < trigger_time or current_close >= forced_close:
         return False
+
+    # Check max extensions
+    if config.max_extensions is not None:
+        from sqlalchemy import func
+        result = await db.execute(
+            select(func.count(ActivityLog.id))
+            .where(ActivityLog.rfq_id == rfq.id, ActivityLog.event_type == "time_extended")
+        )
+        extension_count = result.scalar() or 0
+        if extension_count >= config.max_extensions:
+            return False
 
     # Check trigger condition
     should_extend = False

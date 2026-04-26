@@ -16,6 +16,7 @@ class ActivityLog(Base):
     event_type = Column(
         Enum(
             "bid_submitted",
+            "auction_activated",
             "time_extended",
             "auction_closed",
             "auction_force_closed",

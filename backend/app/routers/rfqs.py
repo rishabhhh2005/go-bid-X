@@ -14,6 +14,7 @@ from app.schemas.rfq import AuctionConfigCreate, RFQCreate, RFQResponse
 from app.auth import get_current_user
 from app.models.user import User
 from sqlalchemy import delete, desc
+from app.routers.ws import manager
 
 router = APIRouter()
 
@@ -61,7 +62,7 @@ async def _refresh_rfq_status(rfq: RFQ, db: AsyncSession) -> None:
         updated = True
         log = ActivityLog(
             rfq_id=rfq.id,
-            event_type="bid_submitted", # Using an existing type or we could add 'auction_activated'
+            event_type="auction_activated",
             description="RFQ moved from draft to active status.",
         )
         db.add(log)
@@ -86,6 +87,16 @@ async def _refresh_rfq_status(rfq: RFQ, db: AsyncSession) -> None:
     if updated:
         await db.commit()
         await db.refresh(rfq)
+
+        # Broadcast status change
+        message = {
+            "event": "status_changed",
+            "rfq_id": str(rfq.id),
+            "status": rfq.status,
+            "current_bid_close_time": rfq.current_bid_close_time.isoformat() + "Z" if rfq.current_bid_close_time.tzinfo is None else rfq.current_bid_close_time.isoformat(),
+        }
+        await manager.broadcast(str(rfq.id), message)
+        await manager.broadcast(rfq.reference_id, message)
 
 # Keeping the old name for compatibility if used elsewhere, but redirecting to new logic
 async def _close_rfq_if_expired(rfq: RFQ, db: AsyncSession) -> None:

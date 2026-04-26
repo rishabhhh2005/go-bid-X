@@ -20,6 +20,27 @@ async def _keep_db_alive():
         except Exception as e:
             print(f"[keep-alive] DB ping failed: {e}")
 
+async def _poll_rfq_status():
+    """Poll for expired RFQs every minute and update their status."""
+    from app.database import AsyncSessionLocal
+    from app.models.rfq import RFQ
+    from app.routers.bids import _refresh_rfq_status
+    from sqlalchemy import select
+
+    while True:
+        await asyncio.sleep(60)
+        try:
+            async with AsyncSessionLocal() as db:
+                # Only check RFQs that are not already closed
+                result = await db.execute(
+                    select(RFQ).where(RFQ.status.in_(["draft", "active"]))
+                )
+                rfqs = result.scalars().all()
+                for rfq in rfqs:
+                    await _refresh_rfq_status(rfq, db)
+        except Exception as e:
+            print(f"[scheduler] RFQ poll failed: {e}")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Warm up immediately on start
@@ -29,11 +50,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"[startup] DB warm-up failed: {e}")
     
-    # Start the keep-alive task
-    task = asyncio.create_task(_keep_db_alive())
+    # Start the background tasks
+    keep_alive_task = asyncio.create_task(_keep_db_alive())
+    scheduler_task = asyncio.create_task(_poll_rfq_status())
     yield
-    # Cancel the task on shutdown
-    task.cancel()
+    # Cancel the tasks on shutdown
+    keep_alive_task.cancel()
+    scheduler_task.cancel()
 
 app = FastAPI(lifespan=lifespan)
 
