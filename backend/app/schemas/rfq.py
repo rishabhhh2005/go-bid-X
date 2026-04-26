@@ -61,7 +61,7 @@ class RFQResponse(BaseModel):
     status: str
     created_at: datetime
     current_lowest_bid: Optional[float] = None
-    auction_config: AuctionConfigResponse
+    auction_config: Optional[AuctionConfigResponse] = None
 
     class Config:
         from_attributes = True

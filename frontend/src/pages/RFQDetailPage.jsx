@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../hooks/useAuth'
 import { fetchActivityLogs, fetchBids, fetchRfq, placeBid } from '../services/appService'
 
 const parseUtcDate = (value) => {
@@ -69,6 +69,7 @@ export default function RFQDetailPage() {
         setBids(bidResponse)
         setActivityLogs(activityResponse)
       } catch (err) {
+        console.error('Error loading data:', err)
         setError('Unable to load RFQ or bids. Check the ID and try again.')
       } finally {
         setLoading(false)
@@ -182,6 +183,7 @@ export default function RFQDetailPage() {
         quote_validity_date: ''
       })
     } catch (err) {
+      console.error('Bid submission error:', err)
       setError('Failed to submit bid. Verify the values and try again.')
     } finally {
       setSubmitting(false)
@@ -189,33 +191,40 @@ export default function RFQDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="min-h-screen relative overflow-hidden bg-slate-50 px-4 py-10 sm:px-6 lg:px-8">
+      {/* Decorative background blobs */}
+      <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-brand-300/20 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-300/20 blur-[120px] pointer-events-none" />
+
+      <div className="mx-auto max-w-7xl space-y-8 relative z-10 animate-fade-in">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between glass-panel px-8 py-6">
           <button
             onClick={() => navigate('/dashboard')}
-            className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            className="btn-secondary flex items-center gap-2"
           >
-            Back to dashboard
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Dashboard
           </button>
-          <h1 className="text-3xl font-semibold text-slate-900">RFQ details</h1>
+          <h1 className="text-3xl font-display font-bold text-slate-900">RFQ Details</h1>
         </div>
 
         {showExtensionAlert && (
-          <div className="fixed top-6 right-6 z-50 animate-bounce rounded-2xl bg-amber-500 p-4 text-white shadow-2xl ring-4 ring-amber-200">
-            <p className="flex items-center gap-2 font-bold">
-              <span className="text-2xl">⏳</span>
+          <div className="fixed top-6 right-6 z-50 animate-bounce glass-panel border-amber-200 bg-amber-500/90 backdrop-blur-md p-5 text-white shadow-2xl">
+            <p className="flex items-center gap-3 font-bold text-lg">
+              <span className="text-3xl">⏳</span>
               AUCTION EXTENDED! New bids in trigger window.
             </p>
           </div>
         )}
 
         {isInTriggerWindow && (
-          <div className={`rounded-3xl p-6 text-center shadow-lg ring-4 ${isAtForcedLimit ? 'bg-red-600 text-white ring-red-200 animate-pulse' : 'bg-amber-100 text-amber-900 ring-amber-200'}`}>
-            <h2 className="text-xl font-bold uppercase tracking-wider">
+          <div className={`glass-panel p-6 text-center shadow-lg border-2 ${isAtForcedLimit ? 'bg-red-600/90 border-red-400 text-white animate-pulse' : 'bg-amber-100/90 border-amber-300 text-amber-900'}`}>
+            <h2 className="text-2xl font-display font-bold uppercase tracking-wider">
               {isAtForcedLimit ? '🚨 FORCED BID CLOSE TIMELINE 🚨' : '⚡ TRIGGER WINDOW ACTIVE ⚡'}
             </h2>
-            <p className="mt-2 text-sm opacity-90">
+            <p className="mt-2 text-base font-medium opacity-90">
               {isAtForcedLimit 
                 ? 'The auction has reached its maximum extension limit. No further extensions possible.' 
                 : 'Bids placed now will extend the auction duration!'}
@@ -224,144 +233,194 @@ export default function RFQDetailPage() {
         )}
 
         {loading ? (
-          <div className="rounded-3xl bg-white p-8 text-center text-slate-600 shadow-sm ring-1 ring-slate-200">Loading auction data…</div>
+          <div className="glass-card p-16 text-center flex flex-col items-center justify-center gap-4">
+            <div className="w-12 h-12 border-4 border-brand-200 border-t-brand-600 rounded-full animate-spin" />
+            <p className="font-medium text-slate-600 animate-pulse text-lg">Loading auction data…</p>
+          </div>
         ) : error ? (
-          <div className="rounded-3xl bg-red-50 p-8 text-center text-red-700 shadow-sm ring-1 ring-red-200">{error}</div>
+          <div className="glass-card bg-red-50/90 border-red-200 p-12 text-center text-red-700 font-medium text-lg flex flex-col items-center gap-4">
+            <svg className="w-12 h-12 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {error}
+          </div>
         ) : (
-          <div className="grid gap-6 xl:grid-cols-[1.7fr_1fr]">
-            <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-              <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="grid gap-8 xl:grid-cols-[1.7fr_1fr]">
+            <section className="glass-panel p-8">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200/60 pb-6">
                 <div>
-                  <p className="text-sm font-semibold uppercase tracking-[0.24em] text-sky-600">{rfq.reference_id}</p>
-                  <h2 className="mt-2 text-2xl font-semibold text-slate-900">{rfq.name}</h2>
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-600 mb-2">{rfq.reference_id}</p>
+                  <h2 className="text-3xl font-display font-bold text-slate-900">{rfq.name}</h2>
                 </div>
-                <div className="rounded-3xl bg-slate-100 px-4 py-2 text-sm font-semibold uppercase tracking-[0.24em] text-slate-600">
-                  {rfq.status}
+                <div className="rounded-full bg-slate-100 border border-slate-200 px-5 py-2 text-sm font-bold uppercase tracking-widest text-slate-700">
+                  {rfq.status.replace('_', ' ')}
                 </div>
               </div>
 
               <div className="mt-8 grid gap-4 sm:grid-cols-2">
-                <div className="rounded-3xl bg-slate-50 p-4 text-sm text-slate-700">
-                  <p className="font-semibold text-slate-900">Current close</p>
-                  <p className="mt-2">{formatLabel(rfq.current_bid_close_time)}</p>
+                <div className="glass-card bg-slate-50/50 p-5">
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Current Close</p>
+                  <p className="text-lg font-semibold text-slate-900">{formatLabel(rfq.current_bid_close_time)}</p>
                 </div>
-                <div className="rounded-3xl bg-slate-50 p-4 text-sm text-slate-700">
-                  <p className="font-semibold text-slate-900">Forced close</p>
-                  <p className="mt-2">{formatLabel(rfq.forced_bid_close_time)}</p>
+                <div className="glass-card bg-slate-50/50 p-5">
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Forced Close</p>
+                  <p className="text-lg font-semibold text-slate-900">{formatLabel(rfq.forced_bid_close_time)}</p>
                 </div>
-                <div className="rounded-3xl bg-slate-50 p-4 text-sm text-slate-700">
-                  <p className="font-semibold text-slate-900">Bid start</p>
-                  <p className="mt-2">{formatLabel(rfq.bid_start_time)}</p>
+                <div className="glass-card bg-slate-50/50 p-5">
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Bid Start</p>
+                  <p className="text-lg font-semibold text-slate-900">{formatLabel(rfq.bid_start_time)}</p>
                 </div>
-                <div className="rounded-3xl bg-slate-50 p-4 text-sm text-slate-700">
-                  <p className="font-semibold text-slate-900">Auction type</p>
-                  <p className="mt-2">{rfq.is_british_auction ? 'British auction' : 'Standard auction'}</p>
+                <div className="glass-card bg-slate-50/50 p-5 border-l-4 border-l-brand-500">
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Auction Type</p>
+                  <p className="text-lg font-semibold text-brand-700">{rfq.is_british_auction ? 'British Reverse Auction' : 'Standard Auction'}</p>
                 </div>
               </div>
 
-              <div className="mt-8 grid gap-4 sm:grid-cols-3">
-                <div className="rounded-3xl bg-slate-50 p-4 text-sm text-slate-700">
-                  <p className="font-semibold text-slate-900">Buyer ID</p>
-                  <p className="mt-2 break-all">{rfq.buyer_id}</p>
+              <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                <div className="glass-card bg-slate-50/50 p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Buyer ID</p>
+                  <p className="text-sm font-mono text-slate-700 truncate" title={rfq.buyer_id}>{rfq.buyer_id}</p>
                 </div>
-                <div className="rounded-3xl bg-slate-50 p-4 text-sm text-slate-700">
-                  <p className="font-semibold text-slate-900">Bid close</p>
-                  <p className="mt-2">{formatLabel(rfq.bid_close_time)}</p>
+                <div className="glass-card bg-slate-50/50 p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Bid Close (Orig)</p>
+                  <p className="text-sm font-medium text-slate-700">{formatLabel(rfq.bid_close_time)}</p>
                 </div>
-                <div className="rounded-3xl bg-slate-50 p-4 text-sm text-slate-700">
-                  <p className="font-semibold text-slate-900">Pickup date</p>
-                  <p className="mt-2">{formatLabel(rfq.pickup_service_date)}</p>
+                <div className="glass-card bg-slate-50/50 p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Pickup Date</p>
+                  <p className="text-sm font-medium text-slate-700">{formatLabel(rfq.pickup_service_date)}</p>
                 </div>
               </div>
 
               {rfq.auction_config && (
-                <div className="mt-8 border-t border-slate-100 pt-6">
-                  <h3 className="text-sm font-semibold uppercase tracking-[0.1em] text-slate-500">Auction Configuration</h3>
-                  <div className="mt-4 grid gap-4 sm:grid-cols-3">
-                    <div className="rounded-2xl border border-slate-100 p-3 text-sm">
-                      <p className="text-slate-500">Trigger Window</p>
-                      <p className="font-semibold">{rfq.auction_config.trigger_window_minutes} minutes</p>
+                <div className="mt-10 border-t border-slate-200/60 pt-8">
+                  <h3 className="text-sm font-bold uppercase tracking-[0.15em] text-slate-500 mb-6 flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Auction Configuration
+                  </h3>
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="glass-card bg-white p-4">
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Trigger Window</p>
+                      <p className="text-lg font-semibold text-slate-900">{rfq.auction_config.trigger_window_minutes} min</p>
                     </div>
-                    <div className="rounded-2xl border border-slate-100 p-3 text-sm">
-                      <p className="text-slate-500">Extension Duration</p>
-                      <p className="font-semibold">{rfq.auction_config.extension_duration_minutes} minutes</p>
+                    <div className="glass-card bg-white p-4">
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Extension Time</p>
+                      <p className="text-lg font-semibold text-slate-900">{rfq.auction_config.extension_duration_minutes} min</p>
                     </div>
-                    <div className="rounded-2xl border border-slate-100 p-3 text-sm">
-                      <p className="text-slate-500">Trigger Logic</p>
-                      <p className="font-semibold uppercase">{rfq.auction_config.extension_trigger_type.replace(/_/g, ' ')}</p>
+                    <div className="glass-card bg-white p-4">
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Trigger Logic</p>
+                      <p className="text-sm font-semibold text-slate-900 uppercase mt-1">{rfq.auction_config.extension_trigger_type.replace(/_/g, ' ')}</p>
                     </div>
                   </div>
                 </div>
               )}
             </section>
 
-            <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <h2 className="text-xl font-semibold text-slate-900">Live bid board</h2>
-                <p className="text-sm text-slate-600">Updates over websocket</p>
+            <section className="glass-panel p-8">
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                <h2 className="text-2xl font-display font-bold text-slate-900 flex items-center gap-2">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-brand-500"></span>
+                  </span>
+                  Live Bid Board
+                </h2>
+                <p className="text-xs font-bold uppercase tracking-wider text-brand-600 bg-brand-50 px-3 py-1 rounded-full border border-brand-100">Live Updates</p>
               </div>
 
               <div className="mt-6 space-y-3">
                 {bids.length === 0 ? (
-                  <div className="rounded-3xl border border-dashed border-slate-300 p-6 text-center text-slate-600">No bids yet.</div>
+                  <div className="glass-card p-10 text-center text-slate-500 border-dashed border-2">No bids have been placed yet.</div>
                 ) : (
                   bids
                     .slice()
                     .sort((a, b) => {
-                      // Active bids first
                       if (a.is_active && !b.is_active) return -1
                       if (!a.is_active && b.is_active) return 1
-                      // Then by rank if active
                       if (a.is_active && b.is_active) {
                         if (a.rank && b.rank) return a.rank - b.rank
                         if (a.rank) return -1
                         if (b.rank) return 1
                       }
-                      // Then by newest first
                       return new Date(b.submitted_at) - new Date(a.submitted_at)
                     })
                     .map((bid) => {
                       const isExpanded = expandedBidIds.has(bid.id)
                       return (
-                        <div key={bid.id} className={`rounded-3xl border transition-all ${bid.is_active ? 'border-sky-200 bg-white shadow-sm ring-1 ring-sky-50' : 'border-slate-200 bg-slate-50 opacity-80'}`}>
+                        <div key={bid.id} className={`glass-card overflow-hidden transition-all duration-300 ${bid.is_active ? 'border-brand-300 bg-white/90 shadow-md transform hover:-translate-y-1 hover:shadow-lg' : 'border-slate-200 bg-slate-50/50 opacity-75'}`}>
                           <button 
                             onClick={() => toggleBidExpansion(bid.id)}
-                            className="flex w-full items-center justify-between gap-4 p-4 text-left"
+                            className="flex w-full items-center justify-between gap-4 p-5 text-left"
                           >
-                            <div className="flex flex-col gap-1">
-                              <p className="text-sm font-semibold text-slate-900">
-                                "{bid.supplier_name || 'Supplier'}" ({bid.supplier_email || 'no email'}) submitted a bid
+                            <div className="flex flex-col gap-2">
+                              <p className="text-base font-semibold text-slate-900">
+                                {bid.supplier_name || 'Supplier'} <span className="text-sm font-normal text-slate-500">({bid.supplier_email || 'no email'})</span>
                               </p>
-                              <p className="text-xs text-slate-500">
+                              <div className="flex items-center gap-2 text-xs">
                                 {bid.is_active ? (
-                                  <span className="font-bold text-sky-600">ACTIVE BID</span>
+                                  <span className="font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded uppercase tracking-wider">Active</span>
                                 ) : (
-                                  <span className="italic">Superseded</span>
+                                  <span className="font-bold text-slate-500 bg-slate-200 px-2 py-0.5 rounded uppercase tracking-wider">Superseded</span>
                                 )} 
-                                • {formatLabel(bid.submitted_at)}
-                              </p>
+                                <span className="text-slate-400">•</span>
+                                <span className="text-slate-500 font-medium">{formatLabel(bid.submitted_at)}</span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-4 shrink-0">
                               {bid.rank && (
-                                <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-700">L{bid.rank}</span>
+                                <div className={`flex flex-col items-center justify-center w-10 h-10 rounded-full ${bid.rank === 1 ? 'bg-amber-100 text-amber-700 ring-2 ring-amber-400 shadow-md' : 'bg-slate-100 text-slate-600'}`}>
+                                  <span className="text-[10px] font-bold uppercase leading-none mt-1">Rank</span>
+                                  <span className="text-lg font-bold leading-none">{bid.rank}</span>
+                                </div>
                               )}
-                              <span className="text-lg font-bold text-slate-900">${bid.total_amount?.toLocaleString()}</span>
-                              <span className={`text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
+                              <span className="text-2xl font-display font-bold text-slate-900">${bid.total_amount?.toLocaleString()}</span>
+                              <span className={`text-brand-500 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </span>
                             </div>
                           </button>
                           
                           {isExpanded && (
-                            <div className="border-t border-slate-100 p-4 pt-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                              <div className="grid gap-4 sm:grid-cols-2 text-sm text-slate-700">
-                                <div>
-                                  <p className="font-semibold text-slate-900">Carrier: {bid.carrier_name}</p>
-                                  <p className="mt-1">Transit: {bid.transit_time_days ? `${bid.transit_time_days} days` : 'N/A'}</p>
-                                  <p>Validity: {bid.quote_validity_date ? formatLabel(bid.quote_validity_date).split(',')[0] : 'N/A'}</p>
+                            <div className="border-t border-slate-100 bg-slate-50/50 p-5 animate-slide-up origin-top">
+                              <div className="grid gap-6 sm:grid-cols-2 text-sm text-slate-700">
+                                <div className="space-y-3">
+                                  <div>
+                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Carrier Details</p>
+                                    <p className="font-semibold text-slate-900 text-base">{bid.carrier_name}</p>
+                                  </div>
+                                  <div className="flex gap-4">
+                                    <div>
+                                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Transit</p>
+                                      <p className="font-medium text-slate-800">{bid.transit_time_days ? `${bid.transit_time_days} Days` : 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Quote Valid Until</p>
+                                      <p className="font-medium text-slate-800">{bid.quote_validity_date ? formatLabel(bid.quote_validity_date).split(',')[0] : 'N/A'}</p>
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className="grid gap-1 text-xs text-slate-500">
-                                  <p>Freight Charges: ${bid.freight_charges}</p>
-                                  <p>Origin Charges: ${bid.origin_charges}</p>
-                                  <p>Destination Charges: ${bid.destination_charges}</p>
+                                <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm space-y-2">
+                                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Cost Breakdown</p>
+                                  <div className="flex justify-between items-center text-sm">
+                                    <span className="text-slate-600">Freight</span>
+                                    <span className="font-medium text-slate-900">${bid.freight_charges}</span>
+                                  </div>
+                                  <div className="flex justify-between items-center text-sm">
+                                    <span className="text-slate-600">Origin</span>
+                                    <span className="font-medium text-slate-900">${bid.origin_charges}</span>
+                                  </div>
+                                  <div className="flex justify-between items-center text-sm border-b border-slate-100 pb-2">
+                                    <span className="text-slate-600">Destination</span>
+                                    <span className="font-medium text-slate-900">${bid.destination_charges}</span>
+                                  </div>
+                                  <div className="flex justify-between items-center text-base pt-1">
+                                    <span className="font-bold text-slate-900">Total</span>
+                                    <span className="font-bold text-brand-600">${bid.total_amount}</span>
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -372,23 +431,35 @@ export default function RFQDetailPage() {
                 )}
               </div>
 
-              <div className="mt-10">
-                <h2 className="text-xl font-semibold text-slate-900">Activity Log</h2>
-                <div className="mt-4 space-y-4 max-h-[400px] overflow-y-auto pr-2">
+              <div className="mt-12">
+                <h2 className="text-xl font-display font-bold text-slate-900 flex items-center gap-2 mb-6">
+                  <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Activity Log
+                </h2>
+                <div className="space-y-4 max-h-[400px] overflow-y-auto pr-4 custom-scrollbar">
                   {activityLogs.length === 0 ? (
-                    <p className="text-sm text-slate-500 italic">No activity yet.</p>
+                    <div className="glass-card p-8 text-center text-slate-500 border-dashed border-2">No activity recorded yet.</div>
                   ) : (
                     activityLogs.map((log) => (
-                      <div key={log.id} className="flex gap-4 p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                        <div className="flex-shrink-0 mt-1">
+                      <div key={log.id} className="flex gap-4 p-4 rounded-2xl bg-white border border-slate-100 shadow-sm transition-all hover:shadow-md hover:border-slate-200">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-lg shadow-inner-light border border-slate-100">
                           {log.event_type === 'time_extended' ? '⏳' : log.event_type === 'bid_submitted' ? '📝' : '🔒'}
                         </div>
-                        <div>
-                          <p className="text-sm text-slate-800">{log.description}</p>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-slate-800">{log.description}</p>
                           {log.extension_reason && (
-                            <p className="text-xs text-sky-600 mt-1 uppercase font-semibold">Reason: {log.extension_reason.replace(/_/g, ' ')}</p>
+                            <p className="inline-block mt-2 px-2 py-1 bg-sky-50 text-sky-700 text-[10px] font-bold uppercase tracking-wider rounded border border-sky-100">
+                              Reason: {log.extension_reason.replace(/_/g, ' ')}
+                            </p>
                           )}
-                          <p className="text-[10px] text-slate-400 mt-1">{formatLabel(log.created_at)}</p>
+                          <p className="text-xs text-slate-400 mt-2 font-medium flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {formatLabel(log.created_at)}
+                          </p>
                         </div>
                       </div>
                     ))
@@ -398,22 +469,24 @@ export default function RFQDetailPage() {
             </section>
 
             {canSubmitBid && (
-              <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-                <h2 className="text-xl font-semibold text-slate-900">Place a bid</h2>
-                <p className="mt-2 text-sm text-slate-600">Suppliers can submit a lower bid to improve ranking.</p>
-                <form onSubmit={handleSubmitBid} className="mt-6 space-y-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
+              <section className="glass-panel p-8 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-brand-400/10 rounded-bl-full pointer-events-none" />
+                <h2 className="text-2xl font-display font-bold text-slate-900 mb-2">Place a bid</h2>
+                <p className="text-sm font-medium text-slate-500 mb-8">Suppliers can submit a lower bid to improve their rank in the auction.</p>
+                <form onSubmit={handleSubmitBid} className="space-y-6 relative z-10">
+                  <div className="grid gap-6 sm:grid-cols-2">
                     <label className="block">
-                      <span className="text-sm font-medium text-slate-700">Carrier name</span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 block">Carrier Name</span>
                       <input
                         value={bidData.carrier_name}
                         onChange={handleBidChange('carrier_name')}
                         required
-                        className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                        placeholder="e.g. Fast Freight Co."
+                        className="input-field"
                       />
                     </label>
                     <label className="block">
-                      <span className="text-sm font-medium text-slate-700">Total amount</span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 block text-brand-600">Total Amount ($)</span>
                       <input
                         type="number"
                         min="0"
@@ -421,14 +494,15 @@ export default function RFQDetailPage() {
                         value={bidData.total_amount}
                         onChange={handleBidChange('total_amount')}
                         required
-                        className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                        placeholder="Sum of all charges"
+                        className="input-field border-brand-200 bg-brand-50/30 focus:border-brand-500 focus:ring-brand-500/30 text-brand-900 font-bold"
                       />
                     </label>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-6 sm:grid-cols-3 bg-slate-50/50 p-5 rounded-2xl border border-slate-100">
                     <label className="block">
-                      <span className="text-sm font-medium text-slate-700">Freight charges</span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 block">Freight Charges</span>
                       <input
                         type="number"
                         min="0"
@@ -436,11 +510,11 @@ export default function RFQDetailPage() {
                         value={bidData.freight_charges}
                         onChange={handleBidChange('freight_charges')}
                         required
-                        className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                        className="input-field bg-white"
                       />
                     </label>
                     <label className="block">
-                      <span className="text-sm font-medium text-slate-700">Origin charges</span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 block">Origin Charges</span>
                       <input
                         type="number"
                         min="0"
@@ -448,11 +522,11 @@ export default function RFQDetailPage() {
                         value={bidData.origin_charges}
                         onChange={handleBidChange('origin_charges')}
                         required
-                        className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                        className="input-field bg-white"
                       />
                     </label>
                     <label className="block">
-                      <span className="text-sm font-medium text-slate-700">Destination charges</span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 block">Destination Charges</span>
                       <input
                         type="number"
                         min="0"
@@ -460,45 +534,67 @@ export default function RFQDetailPage() {
                         value={bidData.destination_charges}
                         onChange={handleBidChange('destination_charges')}
                         required
-                        className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                        className="input-field bg-white"
                       />
                     </label>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-6 sm:grid-cols-2">
                     <label className="block">
-                      <span className="text-sm font-medium text-slate-700">Transit time (days)</span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 block">Transit Time (Days)</span>
                       <input
                         type="number"
                         value={bidData.transit_time_days}
                         onChange={handleBidChange('transit_time_days')}
-                        className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                        placeholder="Optional"
+                        className="input-field"
                       />
                     </label>
                     <label className="block">
-                      <span className="text-sm font-medium text-slate-700">Quote validity</span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 block">Quote Validity</span>
                       <input
                         type="datetime-local"
                         value={bidData.quote_validity_date}
                         onChange={handleBidChange('quote_validity_date')}
-                        className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                        className="input-field"
                       />
                     </label>
                   </div>
 
                   {(error || success) && (
-                    <div className={`rounded-2xl px-4 py-3 text-sm ${error ? 'bg-red-50 text-red-700 ring-1 ring-red-200' : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'}`}>
-                      {error || success}
+                    <div className={`rounded-xl p-4 flex items-start gap-3 border ${error ? 'bg-red-50/80 border-red-200 text-red-800' : 'bg-emerald-50/80 border-emerald-200 text-emerald-800'}`}>
+                      <svg className={`w-5 h-5 shrink-0 mt-0.5 ${error ? 'text-red-500' : 'text-emerald-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        {error ? (
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        ) : (
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        )}
+                      </svg>
+                      <p className="text-sm font-medium">{error || success}</p>
                     </div>
                   )}
 
-                  <button 
-                    type="submit" 
-                    disabled={submitting}
-                    className="rounded-2xl bg-sky-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:opacity-60"
-                  >
-                    {submitting ? 'Submitting bid…' : 'Submit bid'}
-                  </button>
+                  <div className="pt-4 border-t border-slate-100">
+                    <button 
+                      type="submit" 
+                      disabled={submitting}
+                      className="w-full btn-primary py-4 text-base flex justify-center items-center gap-2"
+                    >
+                      {submitting ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          <span>Submitting Bid...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span>Submit Official Bid</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </form>
               </section>
             )}

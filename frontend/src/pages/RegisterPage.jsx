@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../hooks/useAuth'
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('')
@@ -21,6 +21,7 @@ export default function RegisterPage() {
       await register({ email, password, full_name: fullName, company_name: companyName, role })
       navigate('/dashboard', { replace: true })
     } catch (err) {
+      console.error('Registration error:', err)
       setError('Unable to register. Check your details and try again.')
     } finally {
       setLoading(false)
@@ -28,85 +29,125 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-xl rounded-3xl bg-white p-8 shadow-md ring-1 ring-slate-200">
-        <h1 className="text-2xl font-semibold text-slate-900">Create your GoBidX account</h1>
-        <p className="mt-2 text-sm text-slate-600">Register as a buyer or supplier to start bidding and sourcing.</p>
+    <div className="min-h-screen relative overflow-hidden bg-slate-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      {/* Decorative background blobs */}
+      <div className="absolute top-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-brand-300/20 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-blue-300/20 blur-[120px] pointer-events-none" />
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-          <div className="grid gap-4 sm:grid-cols-2">
+      <div className="max-w-xl w-full space-y-8 glass-panel p-10 relative z-10 animate-fade-in shadow-2xl">
+        <div className="text-center">
+          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-brand-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-brand-500/30 transform transition-transform hover:scale-105">
+            <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+            </svg>
+          </div>
+          <h1 className="text-4xl font-display font-bold text-slate-900 tracking-tight">Create an Account</h1>
+          <p className="mt-3 text-base text-slate-600">Register as a buyer or supplier to start bidding and sourcing.</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="mt-10 space-y-6">
+          <div className="grid gap-6 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-slate-700">Full name</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Full Name</label>
               <input
                 type="text"
                 value={fullName}
                 onChange={(event) => setFullName(event.target.value)}
                 required
-                className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                placeholder="John Doe"
+                className="input-field"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Company</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Company</label>
               <input
                 type="text"
                 value={companyName}
                 onChange={(event) => setCompanyName(event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                placeholder="Acme Corp (Optional)"
+                className="input-field"
               />
             </div>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-6 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-slate-700">Email</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Email Address</label>
               <input
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 required
-                className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                placeholder="you@company.com"
+                className="input-field"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Password</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 required
-                className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                placeholder="••••••••"
+                className="input-field"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700">Role</label>
-            <div className="mt-2 flex gap-3">
-              <label className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 hover:border-sky-400">
-                <input type="radio" value="buyer" checked={role === 'buyer'} onChange={() => setRole('buyer')} className="h-4 w-4 text-sky-600" />
-                Buyer
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-3">Select Role</label>
+            <div className="flex gap-4">
+              <label className={`flex-1 flex items-center justify-center gap-3 cursor-pointer p-4 rounded-2xl border-2 transition-all duration-200 ${role === 'buyer' ? 'border-brand-500 bg-brand-50 shadow-md transform scale-[1.02]' : 'border-slate-200 bg-white hover:border-brand-300'}`}>
+                <input type="radio" value="buyer" checked={role === 'buyer'} onChange={() => setRole('buyer')} className="sr-only" />
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${role === 'buyer' ? 'border-brand-600' : 'border-slate-300'}`}>
+                  {role === 'buyer' && <div className="w-2.5 h-2.5 rounded-full bg-brand-600" />}
+                </div>
+                <span className={`font-bold ${role === 'buyer' ? 'text-brand-700' : 'text-slate-600'}`}>Buyer</span>
               </label>
-              <label className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 hover:border-sky-400">
-                <input type="radio" value="supplier" checked={role === 'supplier'} onChange={() => setRole('supplier')} className="h-4 w-4 text-sky-600" />
-                Supplier
+              <label className={`flex-1 flex items-center justify-center gap-3 cursor-pointer p-4 rounded-2xl border-2 transition-all duration-200 ${role === 'supplier' ? 'border-brand-500 bg-brand-50 shadow-md transform scale-[1.02]' : 'border-slate-200 bg-white hover:border-brand-300'}`}>
+                <input type="radio" value="supplier" checked={role === 'supplier'} onChange={() => setRole('supplier')} className="sr-only" />
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${role === 'supplier' ? 'border-brand-600' : 'border-slate-300'}`}>
+                  {role === 'supplier' && <div className="w-2.5 h-2.5 rounded-full bg-brand-600" />}
+                </div>
+                <span className={`font-bold ${role === 'supplier' ? 'text-brand-700' : 'text-slate-600'}`}>Supplier</span>
               </label>
             </div>
           </div>
 
-          {error && <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+          {error && (
+            <div className="rounded-xl p-4 flex items-start gap-3 border bg-red-50/80 border-red-200 text-red-800 animate-pulse">
+              <svg className="w-5 h-5 shrink-0 mt-0.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-sm font-medium">{error}</p>
+            </div>
+          )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-2xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:opacity-60"
+            className="w-full btn-primary py-4 text-base flex justify-center items-center gap-2"
           >
-            {loading ? 'Creating account…' : 'Create account'}
+            {loading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span>Creating Account...</span>
+              </>
+            ) : (
+              <>
+                <span>Register for GoBidX</span>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </>
+            )}
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-slate-600">
+        <p className="mt-8 text-center text-sm font-medium text-slate-600">
           Already registered?{' '}
-          <Link to="/login" className="font-semibold text-sky-600 hover:text-sky-700">
-            Log in
+          <Link to="/login" className="text-brand-600 hover:text-brand-700 font-bold hover:underline transition-all">
+            Log In
           </Link>
         </p>
       </div>

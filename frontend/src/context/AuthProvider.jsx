@@ -1,27 +1,24 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getCurrentUser, loginRequest, registerRequest } from '../services/appService'
 import { getLocalUser, saveLocalUser, removeLocalUser } from '../services/localStorage'
-
-const AuthContext = createContext(null)
+import { AuthContext } from './AuthContext'
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState(() => getLocalUser())
+  const [loading, setLoading] = useState(() => {
+    const token = localStorage.getItem('gobidx_token')
+    return !!token
+  })
   const navigate = useNavigate()
 
   useEffect(() => {
     const storedToken = localStorage.getItem('gobidx_token')
-    const cachedUser = getLocalUser()
-
-    if (cachedUser) {
-      setUser(cachedUser)
-      setLoading(false)
-    }
-
+    
     if (!storedToken) {
-      setLoading(false)
-      if (cachedUser) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (loading) setLoading(false)
+      if (user) {
         setUser(null)
         removeLocalUser()
       }
@@ -34,6 +31,7 @@ export function AuthProvider({ children }) {
         setUser(profile)
         saveLocalUser(profile)
       } catch (error) {
+        console.error('Failed to load profile:', error)
         localStorage.removeItem('gobidx_token')
         removeLocalUser()
         setUser(null)
@@ -43,28 +41,29 @@ export function AuthProvider({ children }) {
     }
 
     loadProfile()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const login = async ({ email, password }) => {
+  const login = useCallback(async ({ email, password }) => {
     const data = await loginRequest({ email, password })
     localStorage.setItem('gobidx_token', data.access_token)
     const profile = await getCurrentUser()
     setUser(profile)
     saveLocalUser(profile)
     return profile
-  }
+  }, [])
 
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.removeItem('gobidx_token')
     removeLocalUser()
     setUser(null)
     navigate('/login', { replace: true })
-  }
+  }, [navigate])
 
-  const register = async (payload) => {
+  const register = useCallback(async (payload) => {
     await registerRequest(payload)
     return login({ email: payload.email, password: payload.password })
-  }
+  }, [login])
 
   useEffect(() => {
     const handleStorageChange = (event) => {
@@ -85,12 +84,8 @@ export function AuthProvider({ children }) {
       register,
       isAuthenticated: Boolean(user),
     }),
-    [user, loading],
+    [user, loading, login, logout, register],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-}
-
-export function useAuth() {
-  return useContext(AuthContext)
 }
