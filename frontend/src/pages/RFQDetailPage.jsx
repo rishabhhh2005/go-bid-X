@@ -82,7 +82,7 @@ export default function RFQDetailPage() {
     if (!id) return
     
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
+    const apiUrl = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '')
     const host = apiUrl.replace(/^https?:\/\//, '')
     const wsUrl = `${protocol}//${host}/ws/rfq/${id}`
     const ws = new WebSocket(wsUrl)
