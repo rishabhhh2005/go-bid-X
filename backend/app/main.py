@@ -84,3 +84,7 @@ async def test_db():
         result = await conn.execute(text("SELECT 1"))
         return {"db": "connected"}
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
