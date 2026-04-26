@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 
 def _utc_datetime_encoder(value: datetime) -> str:
@@ -23,6 +23,13 @@ class BidCreate(BaseModel):
     total_amount: Decimal
     transit_time_days: Optional[int] = None
     quote_validity_date: Optional[datetime] = None
+
+    @model_validator(mode='after')
+    def verify_total_amount(self) -> 'BidCreate':
+        expected_total = self.freight_charges + self.origin_charges + self.destination_charges
+        if self.total_amount != expected_total:
+            raise ValueError(f"total_amount must equal sum of charges: {expected_total}")
+        return self
 
 
 class BidResponse(BaseModel):

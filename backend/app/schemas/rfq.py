@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Literal, Optional
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 
 def _utc_datetime_encoder(value: datetime) -> str:
@@ -27,7 +27,15 @@ class RFQCreate(BaseModel):
     forced_bid_close_time: datetime
     pickup_service_date: Optional[datetime] = None
     is_british_auction: bool = False
-    auction_config: AuctionConfigCreate
+    auction_config: Optional[AuctionConfigCreate] = None
+
+    @model_validator(mode='after')
+    def validate_auction_config(self) -> 'RFQCreate':
+        if self.is_british_auction and not self.auction_config:
+            raise ValueError("auction_config is required when is_british_auction is True")
+        if not self.is_british_auction and self.auction_config:
+            self.auction_config = None
+        return self
 
 
 class AuctionConfigResponse(AuctionConfigCreate):
