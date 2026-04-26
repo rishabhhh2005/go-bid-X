@@ -1,16 +1,60 @@
-# React + Vite
+# GoBidX Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is the frontend application for **GoBidX**, a modern, full-stack Request for Quotation (RFQ) platform featuring a British Auction module.
 
-Currently, two official plugins are available:
+## 🚀 Technology Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **React 18**: Frontend library for building user interfaces.
+- **Vite**: Next-generation frontend tooling for fast development and building.
+- **Tailwind CSS**: Utility-first CSS framework for rapid and responsive styling.
+- **React Router DOM**: Client-side routing.
+- **Context API**: Global state management (Authentication).
+- **WebSockets**: Native browser WebSockets for real-time live bid board updates and dynamic auction extensions.
 
-## React Compiler
+## ✨ Key Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Role-Based Dashboards**: Distinct interfaces for `buyers` (RFQ creation and monitoring) and `suppliers` (bidding and live ranking).
+- **Live Bid Board**: Real-time WebSocket connection displaying active bids and automated RFQ status updates without requiring a page refresh.
+- **Dynamic Auction Notifications**: Visual cues and alerts when an auction is automatically extended or falls within the trigger window limit.
+- **Responsive Design**: Fully optimized for desktop and mobile displays using modern design aesthetics and Tailwind CSS.
 
-## Expanding the ESLint configuration
+## 🛠️ Setup Instructions
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Prerequisites
+- Node.js (v18+ recommended)
+- The GoBidX Backend server running locally or remotely.
+
+### Installation
+
+1. Navigate to the `frontend` directory:
+   ```bash
+   cd frontend
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Configure Environment Variables:
+   Create a `.env` file in the root of the `frontend` directory (you can use `.env.example` as a reference):
+   ```env
+   VITE_API_URL=http://localhost:8000
+   ```
+
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+The application will be accessible at `http://localhost:5173`.
+
+## 📦 Building for Production
+
+To create an optimized production build:
+
+```bash
+npm run build
+```
+
+This will generate the minified bundle in the `dist` folder, which can be deployed to Vercel, Netlify, AWS S3, or any other static hosting service.

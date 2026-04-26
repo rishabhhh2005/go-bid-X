@@ -180,4 +180,4 @@ Register → Login → Create RFQ → Place Bid → Get Bids → Ranking
 
 If all the above steps work correctly, the backend is fully functional.
 
-WebSocket integration can be extended further when the frontend is implemented.
+WebSocket integration is fully implemented, providing real-time bid board updates and RFQ status changes to connected clients.
