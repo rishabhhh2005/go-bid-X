@@ -234,7 +234,7 @@ export default function RFQDetailPage() {
         </div>
 
         {showExtensionAlert && (
-          <div className="fixed top-6 right-6 z-50 animate-bounce glass-panel border-amber-200 bg-amber-500/90 backdrop-blur-md p-5 text-white shadow-2xl">
+          <div className="fixed top-6 right-6 z-50 animate-bounce glass-panel border-amber-200 bg-amber-500/90 backdrop-blur-md p-5 text-slate-900 shadow-2xl">
             <p className="flex items-center gap-3 font-bold text-lg">
               <span className="text-3xl">⏳</span>
               AUCTION EXTENDED! New bids in trigger window.
@@ -243,7 +243,7 @@ export default function RFQDetailPage() {
         )}
 
         {isInTriggerWindow && (
-          <div className={`glass-panel p-6 text-center shadow-lg border-2 ${isAtForcedLimit ? 'bg-red-600/90 border-red-400 text-white animate-pulse' : 'bg-amber-100/90 border-amber-300 text-amber-900'}`}>
+          <div className={`glass-panel p-6 text-center shadow-lg border-2 ${isAtForcedLimit ? 'bg-red-600/90 border-red-400 text-slate-900 animate-pulse' : 'bg-amber-100/90 border-amber-300 text-amber-900'}`}>
             <h2 className="text-2xl font-display font-bold uppercase tracking-wider">
               {isAtForcedLimit ? '🚨 FORCED BID CLOSE TIMELINE 🚨' : '⚡ TRIGGER WINDOW ACTIVE ⚡'}
             </h2>
