@@ -155,14 +155,36 @@ export default function RFQDetailPage() {
     setError('')
     setSuccess('')
     setSubmitting(true)
+
+    // 1. Validate Sum of Charges
+    const freight = Number(bidData.freight_charges) || 0
+    const origin = Number(bidData.origin_charges) || 0
+    const destination = Number(bidData.destination_charges) || 0
+    const total = Number(bidData.total_amount) || 0
+    const calculatedTotal = Number((freight + origin + destination).toFixed(2))
+
+    if (Math.abs(calculatedTotal - total) > 0.01) {
+      setError(`Entry Error: The Total Amount ($${total}) does not match the sum of charges ($${calculatedTotal}). Please verify that Freight + Origin + Destination equals Total.`)
+      setSubmitting(false)
+      return
+    }
+
+    // 2. Validate Lower Bid (Reverse Auction)
+    const myCurrentBestBid = bids.find(b => b.supplier_id === user?.id && b.is_active)
+    if (myCurrentBestBid && total >= myCurrentBestBid.total_amount) {
+      setError(`Bid Higher Error: You already have a bid of $${myCurrentBestBid.total_amount}. In a reverse auction, you must submit a LOWER bid to improve your position.`)
+      setSubmitting(false)
+      return
+    }
+
     try {
       await placeBid({
         rfq_id: id,
         carrier_name: bidData.carrier_name,
-        freight_charges: Number(bidData.freight_charges),
-        origin_charges: Number(bidData.origin_charges),
-        destination_charges: Number(bidData.destination_charges),
-        total_amount: Number(bidData.total_amount),
+        freight_charges: freight,
+        origin_charges: origin,
+        destination_charges: destination,
+        total_amount: total,
         transit_time_days: bidData.transit_time_days ? Number(bidData.transit_time_days) : null,
         quote_validity_date: bidData.quote_validity_date ? new Date(bidData.quote_validity_date).toISOString() : null,
       })
@@ -172,7 +194,7 @@ export default function RFQDetailPage() {
       ])
       setBids(refreshedBids)
       setActivityLogs(refreshedActivity)
-      setSuccess('Bid submitted successfully.')
+      setSuccess('Your bid has been successfully submitted and ranks on the board.')
       setBidData({ 
         carrier_name: '', 
         freight_charges: '', 
@@ -184,7 +206,8 @@ export default function RFQDetailPage() {
       })
     } catch (err) {
       console.error('Bid submission error:', err)
-      setError('Failed to submit bid. Verify the values and try again.')
+      const detail = err.response?.data?.detail
+      setError(typeof detail === 'string' ? detail : 'Failed to submit bid. Please verify all fields and try again.')
     } finally {
       setSubmitting(false)
     }
@@ -486,7 +509,16 @@ export default function RFQDetailPage() {
                       />
                     </label>
                     <label className="block">
-                      <span className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2 block text-brand-600">Total Amount ($)</span>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs font-bold uppercase tracking-wider text-brand-600">Total Amount ($)</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded transition-all duration-300 ${
+                          bidData.total_amount && Math.abs((Number(bidData.freight_charges || 0) + Number(bidData.origin_charges || 0) + Number(bidData.destination_charges || 0)) - Number(bidData.total_amount)) > 0.01
+                          ? 'bg-red-100 text-red-700 ring-1 ring-red-200 animate-pulse'
+                          : 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200'
+                        }`}>
+                          Calculated: ${(Number(bidData.freight_charges || 0) + Number(bidData.origin_charges || 0) + Number(bidData.destination_charges || 0)).toFixed(2)}
+                        </span>
+                      </div>
                       <input
                         type="number"
                         min="0"
@@ -495,7 +527,11 @@ export default function RFQDetailPage() {
                         onChange={handleBidChange('total_amount')}
                         required
                         placeholder="Sum of all charges"
-                        className="input-field border-brand-200 bg-brand-50/30 focus:border-brand-500 focus:ring-brand-500/30 text-brand-900 font-bold"
+                        className={`input-field font-bold transition-all ${
+                          bidData.total_amount && Math.abs((Number(bidData.freight_charges || 0) + Number(bidData.origin_charges || 0) + Number(bidData.destination_charges || 0)) - Number(bidData.total_amount)) > 0.01
+                          ? 'border-red-300 bg-red-50/30 focus:border-red-500 focus:ring-red-500/30'
+                          : 'border-brand-200 bg-brand-50/30 focus:border-brand-500 focus:ring-brand-500/30 text-brand-900'
+                        }`}
                       />
                     </label>
                   </div>
