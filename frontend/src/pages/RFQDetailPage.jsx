@@ -249,7 +249,7 @@ export default function RFQDetailPage() {
             </h2>
             <p className="mt-2 text-base font-medium opacity-90">
               {isAtForcedLimit
-                ? 'The auction has reached its maximum extension limit.Last Chance to Place a Bid, No further extensions possible.'
+                ? 'The auction has reached its maximum extension limit. Last Chance to Place a Bid, No further extensions possible.'
                 : 'Bids placed now will extend the auction duration!'}
             </p>
           </div>
@@ -512,8 +512,8 @@ export default function RFQDetailPage() {
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-xs font-bold uppercase tracking-wider text-brand-600">Total Amount ($)</span>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded transition-all duration-300 ${bidData.total_amount && Math.abs((Number(bidData.freight_charges || 0) + Number(bidData.origin_charges || 0) + Number(bidData.destination_charges || 0)) - Number(bidData.total_amount)) > 0.01
-                            ? 'bg-red-100 text-red-700 ring-1 ring-red-200 animate-pulse'
-                            : 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200'
+                          ? 'bg-red-100 text-red-700 ring-1 ring-red-200 animate-pulse'
+                          : 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200'
                           }`}>
                           Calculated: ${(Number(bidData.freight_charges || 0) + Number(bidData.origin_charges || 0) + Number(bidData.destination_charges || 0)).toFixed(2)}
                         </span>
@@ -527,8 +527,8 @@ export default function RFQDetailPage() {
                         required
                         placeholder="Sum of all charges"
                         className={`input-field font-bold transition-all ${bidData.total_amount && Math.abs((Number(bidData.freight_charges || 0) + Number(bidData.origin_charges || 0) + Number(bidData.destination_charges || 0)) - Number(bidData.total_amount)) > 0.01
-                            ? 'border-red-300 bg-red-50/30 focus:border-red-500 focus:ring-red-500/30'
-                            : 'border-brand-200 bg-brand-50/30 focus:border-brand-500 focus:ring-brand-500/30 text-brand-900'
+                          ? 'border-red-300 bg-red-50/30 focus:border-red-500 focus:ring-red-500/30'
+                          : 'border-brand-200 bg-brand-50/30 focus:border-brand-500 focus:ring-brand-500/30 text-brand-900'
                           }`}
                       />
                     </label>
