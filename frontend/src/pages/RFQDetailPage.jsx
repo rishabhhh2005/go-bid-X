@@ -80,7 +80,7 @@ export default function RFQDetailPage() {
 
   useEffect(() => {
     if (!id) return
-    
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const apiUrl = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '')
     const host = apiUrl.replace(/^https?:\/\//, '')
@@ -89,12 +89,12 @@ export default function RFQDetailPage() {
 
     ws.onopen = () => console.log('WebSocket connected to', wsUrl)
     ws.onerror = (err) => console.error('WebSocket error:', err)
-    
+
     ws.onmessage = async (event) => {
       try {
         const message = JSON.parse(event.data)
         console.log('WebSocket message received:', message)
-        
+
         if (message.event === 'new_bid') {
           // Fetch the absolute latest data
           const [refreshedBids, refreshedActivity] = await Promise.all([
@@ -103,7 +103,7 @@ export default function RFQDetailPage() {
           ])
           setBids(refreshedBids)
           setActivityLogs(refreshedActivity)
-          
+
           // Update RFQ state with new close time from message
           if (message.current_bid_close_time) {
             setRfq((current) => {
@@ -195,11 +195,11 @@ export default function RFQDetailPage() {
       setBids(refreshedBids)
       setActivityLogs(refreshedActivity)
       setSuccess('Your bid has been successfully submitted and ranks on the board.')
-      setBidData({ 
-        carrier_name: '', 
-        freight_charges: '', 
-        origin_charges: '', 
-        destination_charges: '', 
+      setBidData({
+        carrier_name: '',
+        freight_charges: '',
+        origin_charges: '',
+        destination_charges: '',
         total_amount: '',
         transit_time_days: '',
         quote_validity_date: ''
@@ -248,8 +248,8 @@ export default function RFQDetailPage() {
               {isAtForcedLimit ? '🚨 FORCED BID CLOSE TIMELINE 🚨' : '⚡ TRIGGER WINDOW ACTIVE ⚡'}
             </h2>
             <p className="mt-2 text-base font-medium opacity-90">
-              {isAtForcedLimit 
-                ? 'The auction has reached its maximum extension limit. No further extensions possible.' 
+              {isAtForcedLimit
+                ? 'The auction has reached its maximum extension limit.Last Chance to Place a Bid, No further extensions possible.'
                 : 'Bids placed now will extend the auction duration!'}
             </p>
           </div>
@@ -373,7 +373,7 @@ export default function RFQDetailPage() {
                       const isExpanded = expandedBidIds.has(bid.id)
                       return (
                         <div key={bid.id} className={`glass-card overflow-hidden transition-all duration-300 ${bid.is_active ? 'border-brand-300 bg-white/90 shadow-md transform hover:-translate-y-1 hover:shadow-lg' : 'border-slate-200 bg-slate-50/50 opacity-75'}`}>
-                          <button 
+                          <button
                             onClick={() => toggleBidExpansion(bid.id)}
                             className="flex w-full items-center justify-between gap-4 p-5 text-left"
                           >
@@ -386,7 +386,7 @@ export default function RFQDetailPage() {
                                   <span className="font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded uppercase tracking-wider">Active</span>
                                 ) : (
                                   <span className="font-bold text-slate-500 bg-slate-200 px-2 py-0.5 rounded uppercase tracking-wider">Superseded</span>
-                                )} 
+                                )}
                                 <span className="text-slate-400">•</span>
                                 <span className="text-slate-500 font-medium">{formatLabel(bid.submitted_at)}</span>
                               </div>
@@ -406,7 +406,7 @@ export default function RFQDetailPage() {
                               </span>
                             </div>
                           </button>
-                          
+
                           {isExpanded && (
                             <div className="border-t border-slate-100 bg-slate-50/50 p-5 animate-slide-up origin-top">
                               <div className="grid gap-6 sm:grid-cols-2 text-sm text-slate-700">
@@ -511,11 +511,10 @@ export default function RFQDetailPage() {
                     <label className="block">
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-xs font-bold uppercase tracking-wider text-brand-600">Total Amount ($)</span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded transition-all duration-300 ${
-                          bidData.total_amount && Math.abs((Number(bidData.freight_charges || 0) + Number(bidData.origin_charges || 0) + Number(bidData.destination_charges || 0)) - Number(bidData.total_amount)) > 0.01
-                          ? 'bg-red-100 text-red-700 ring-1 ring-red-200 animate-pulse'
-                          : 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200'
-                        }`}>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded transition-all duration-300 ${bidData.total_amount && Math.abs((Number(bidData.freight_charges || 0) + Number(bidData.origin_charges || 0) + Number(bidData.destination_charges || 0)) - Number(bidData.total_amount)) > 0.01
+                            ? 'bg-red-100 text-red-700 ring-1 ring-red-200 animate-pulse'
+                            : 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200'
+                          }`}>
                           Calculated: ${(Number(bidData.freight_charges || 0) + Number(bidData.origin_charges || 0) + Number(bidData.destination_charges || 0)).toFixed(2)}
                         </span>
                       </div>
@@ -527,11 +526,10 @@ export default function RFQDetailPage() {
                         onChange={handleBidChange('total_amount')}
                         required
                         placeholder="Sum of all charges"
-                        className={`input-field font-bold transition-all ${
-                          bidData.total_amount && Math.abs((Number(bidData.freight_charges || 0) + Number(bidData.origin_charges || 0) + Number(bidData.destination_charges || 0)) - Number(bidData.total_amount)) > 0.01
-                          ? 'border-red-300 bg-red-50/30 focus:border-red-500 focus:ring-red-500/30'
-                          : 'border-brand-200 bg-brand-50/30 focus:border-brand-500 focus:ring-brand-500/30 text-brand-900'
-                        }`}
+                        className={`input-field font-bold transition-all ${bidData.total_amount && Math.abs((Number(bidData.freight_charges || 0) + Number(bidData.origin_charges || 0) + Number(bidData.destination_charges || 0)) - Number(bidData.total_amount)) > 0.01
+                            ? 'border-red-300 bg-red-50/30 focus:border-red-500 focus:ring-red-500/30'
+                            : 'border-brand-200 bg-brand-50/30 focus:border-brand-500 focus:ring-brand-500/30 text-brand-900'
+                          }`}
                       />
                     </label>
                   </div>
@@ -611,8 +609,8 @@ export default function RFQDetailPage() {
                   )}
 
                   <div className="pt-4 border-t border-slate-100">
-                    <button 
-                      type="submit" 
+                    <button
+                      type="submit"
                       disabled={submitting}
                       className="w-full btn-primary py-4 text-base flex justify-center items-center gap-2"
                     >
