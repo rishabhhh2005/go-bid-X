@@ -52,12 +52,17 @@ async def lifespan(app: FastAPI):
         print(f"[startup] DB warm-up failed: {e}")
     
     # Start the background tasks
-    keep_alive_task = asyncio.create_task(_keep_db_alive())
-    scheduler_task = asyncio.create_task(_poll_rfq_status())
+
+    # Manually Stopped for Saving Resoures on Free Tier         ---------------
+    # keep_alive_task = asyncio.create_task(_keep_db_alive())
+    # scheduler_task = asyncio.create_task(_poll_rfq_status())
+
     yield
     # Cancel the tasks on shutdown
-    keep_alive_task.cancel()
-    scheduler_task.cancel()
+    
+    # Manually Stopped for Saving Resoures on Free Tier       -------------------
+    # keep_alive_task.cancel()
+    # scheduler_task.cancel()
 
 app = FastAPI(lifespan=lifespan)
 
