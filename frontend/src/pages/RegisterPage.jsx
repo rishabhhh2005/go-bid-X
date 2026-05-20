@@ -13,16 +13,53 @@ export default function RegisterPage() {
   const { register } = useAuth()
   const navigate = useNavigate()
 
+  const parseBackendError = (err) => {
+    const detail = err?.response?.data?.detail || err?.message
+    if (err?.response?.status === 409 || detail === 'Email already registered') {
+      return 'User already exists. Please login or use a different email.'
+    }
+    if (detail === 'Invalid email or password') {
+      return 'Invalid email or password.'
+    }
+    return typeof detail === 'string' ? detail : 'Unable to register. Check your details and try again.'
+  }
+
+  const validateRegisterForm = () => {
+    if (!fullName.trim()) {
+      return 'Full name is required.'
+    }
+    if (!email.trim()) {
+      return 'Email address is required.'
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return 'Please enter a valid email address.'
+    }
+    if (!password) {
+      return 'Password is required.'
+    }
+    if (password.length < 8) {
+      return 'Password must be at least 8 characters long.'
+    }
+    return ''
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     setError('')
+    const validationError = validateRegisterForm()
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+
     setLoading(true)
     try {
       await register({ email, password, full_name: fullName, company_name: companyName, role })
       navigate('/dashboard', { replace: true })
     } catch (err) {
       console.error('Registration error:', err)
-      setError('Unable to register. Check your details and try again.')
+      setError(parseBackendError(err))
     } finally {
       setLoading(false)
     }

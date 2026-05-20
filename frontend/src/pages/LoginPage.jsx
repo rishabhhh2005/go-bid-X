@@ -10,16 +10,44 @@ export default function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
 
+  const parseBackendError = (err) => {
+    const detail = err?.response?.data?.detail || err?.message
+    if (detail === 'Invalid email or password') {
+      return 'Invalid email or password.'
+    }
+    return typeof detail === 'string' ? detail : 'Unable to log in. Please check your credentials and try again.'
+  }
+
+  const validateLoginForm = () => {
+    if (!email.trim()) {
+      return 'Email address is required.'
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return 'Please enter a valid email address.'
+    }
+    if (!password) {
+      return 'Password is required.'
+    }
+    return ''
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     setError('')
+    const validationError = validateLoginForm()
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+
     setLoading(true)
     try {
       await login({ email, password })
       navigate('/dashboard', { replace: true })
     } catch (err) {
       console.error('Login error:', err)
-      setError('Invalid email or password')
+      setError(parseBackendError(err))
     } finally {
       setLoading(false)
     }
