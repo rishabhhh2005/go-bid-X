@@ -57,7 +57,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('gobidx_token')
     removeLocalUser()
     setUser(null)
-    navigate('/login', { replace: true })
+    navigate('/', { replace: true })
   }, [navigate])
 
   const register = useCallback(async (payload) => {
