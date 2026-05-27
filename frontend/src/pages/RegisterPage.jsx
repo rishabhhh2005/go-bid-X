@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-
+import logo from "../assets/logo.png";
 export default function RegisterPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -77,11 +77,13 @@ export default function RegisterPage() {
 
       <div className="max-w-xl w-full space-y-8 glass-panel p-10 relative z-10 animate-fade-in shadow-2xl">
         <div className="text-center">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-brand-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-brand-500/30 transform transition-transform hover:scale-105">
-            <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-            </svg>
-          </div>
+          <div className="mx-auto mb-6 flex justify-center">
+  <img
+    src={logo}
+    alt="GoBidX"
+    className="h-16 w-auto object-contain"
+  />
+</div>
           <h1 className="text-4xl font-display font-bold text-slate-900 tracking-tight">Create an Account</h1>
           <p className="mt-3 text-base text-slate-600">Register as a buyer or supplier to start bidding and sourcing.</p>
         </div>

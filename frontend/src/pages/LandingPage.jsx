@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useEffect, useRef, useState } from 'react'
-
+import logo from "../assets/logo.png";
 /* ─── Scroll-reveal hook ───────────────────────────────────────────── */
 function useInView(threshold = 0.15) {
   const ref = useRef(null)
@@ -169,14 +169,16 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
 
           {/* Logo */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 bg-gradient-to-br from-brand-500 to-blue-600 rounded-lg flex items-center justify-center shadow-sm shadow-brand-500/30">
-              <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            <span className="font-display font-bold text-lg text-slate-900 tracking-tight">GoBidX</span>
-          </div>
+         <div className="flex items-center gap-2.5">
+  <img
+    src={logo}
+    alt="GoBidX"
+    className="w-9 h-9 object-contain"
+  />
+  <span className="font-display font-bold text-lg text-slate-900 tracking-tight">
+    GoBidX
+  </span>
+</div>
 
           {/* Center pills — decorative on desktop */}
           <div className="hidden md:flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-widest select-none">
@@ -640,13 +642,15 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
 
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-gradient-to-br from-brand-500 to-blue-600 rounded flex items-center justify-center">
-              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            <span className="font-display font-bold text-slate-800 text-sm">GoBidX</span>
-          </div>
+  <img
+    src={logo}
+    alt="GoBidX"
+    className="h-8 w-auto object-contain"
+  />
+  <span className="font-display font-bold text-slate-800 text-sm">
+    GoBidX
+  </span>
+</div>
 
           <p className="text-[11px] text-slate-400">
             © 2026 GoBidX · British Auction RFQ Platform · Made by Rishabh Puri

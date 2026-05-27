@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-
+import logo from "../assets/logo.png";
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -65,11 +65,13 @@ export default function LoginPage() {
 
       <div className="max-w-md w-full space-y-8 glass-panel p-10 relative z-10 animate-fade-in shadow-2xl">
         <div className="text-center">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-brand-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-brand-500/30 transform transition-transform hover:scale-105">
-            <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </div>
+          <div className="mx-auto w-16 h-16 bg-white rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-brand-500/20 transform transition-transform hover:scale-105 p-2">
+  <img
+    src={logo}
+    alt="GoBidX"
+    className="w-full h-full object-contain"
+  />
+</div>
           <h1 className="text-4xl font-display font-bold text-slate-900 tracking-tight">Welcome Back</h1>
           <p className="mt-3 text-base text-slate-600">Access your buyer or supplier dashboard to manage live auctions.</p>
         </div>
