@@ -42,10 +42,22 @@ async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
         user_id=user.id
     )
 
-    await send_verification_email(
-        recipient_email=user.email,
-        otp=otp
-    )
+    try:
+        await send_verification_email(
+            recipient_email=user.email,
+            otp=otp
+        )
+    except Exception as e:
+        print(f"Error sending verification email: {e}")
+        # We still return the user because they are created in the DB
+        # But we could optionally raise an error or return a specific flag
+        # For now, let's keep it simple but aware.
+        # However, if they can't get the email, they can't verify.
+        # Let's raise an informative exception for now to help the user see it's an email issue.
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"User registered but failed to send verification email. Please check SMTP settings. Error: {str(e)}"
+        )
 
     return user
 
@@ -129,12 +141,6 @@ async def login(login_in: UserLogin, db: AsyncSession = Depends(get_db)):
             detail="Invalid email or password"
         )
 
-    if not user.is_verified:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Please verify your email first"
-        )
-
     access_token = create_access_token(
         {
             "sub": str(user.id),
@@ -176,10 +182,17 @@ async def resend_otp(
         user_id=user.id
     )
 
-    await send_verification_email(
-        recipient_email=user.email,
-        otp=otp
-    )
+    try:
+        await send_verification_email(
+            recipient_email=user.email,
+            otp=otp
+        )
+    except Exception as e:
+        print(f"Error resending verification email: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to send verification email. Error: {str(e)}"
+        )
 
     return {
         "message": "OTP resent successfully"
