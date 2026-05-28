@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     SMTP_EMAIL: str
     SMTP_PASSWORD: str
     
-    FRONTEND_URL: str = "http://localhost:5173"
+    FRONTEND_URL: str = "http://localhost:5173,https://go-bid-x-frontend.vercel.app"
 
     
     model_config = SettingsConfigDict(env_file=".env")
