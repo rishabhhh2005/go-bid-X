@@ -5,10 +5,8 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
-    SMTP_HOST: str
-    SMTP_PORT: int
-    SMTP_EMAIL: str
-    SMTP_PASSWORD: str
+    RESEND_API_KEY: str
+    FROM_EMAIL: str = "GoBidX <onboarding@resend.dev>"
     
     FRONTEND_URL: str = "http://localhost:5173,https://go-bid-x-frontend.vercel.app"
 

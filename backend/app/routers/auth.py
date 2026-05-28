@@ -48,15 +48,11 @@ async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
             otp=otp
         )
     except Exception as e:
-        print(f"Error sending verification email: {e}")
-        # We still return the user because they are created in the DB
-        # But we could optionally raise an error or return a specific flag
-        # For now, let's keep it simple but aware.
-        # However, if they can't get the email, they can't verify.
-        # Let's raise an informative exception for now to help the user see it's an email issue.
+        print(f"Error sending verification email via Resend: {e}")
+        # Let's raise an informative exception for now to help the user see it's a Resend issue.
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"User registered but failed to send verification email. Please check SMTP settings. Error: {str(e)}"
+            detail=f"User registered but failed to send verification email. Please check Resend API key and FROM_EMAIL. Error: {str(e)}"
         )
 
     return user
@@ -188,10 +184,10 @@ async def resend_otp(
             otp=otp
         )
     except Exception as e:
-        print(f"Error resending verification email: {e}")
+        print(f"Error resending verification email via Resend: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to send verification email. Error: {str(e)}"
+            detail=f"Failed to send verification email via Resend. Error: {str(e)}"
         )
 
     return {
