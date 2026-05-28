@@ -10,6 +10,16 @@ export const registerRequest = async (payload) => {
   return response.data
 }
 
+export const verifyEmailRequest = async (payload) => {
+  const response = await api.post('/verify-email', payload)
+  return response.data
+}
+
+export const resendOtpRequest = async (payload) => {
+  const response = await api.post('/resend-otp', payload)
+  return response.data
+}
+
 export const getCurrentUser = async () => {
   const response = await api.get('/me')
   return response.data

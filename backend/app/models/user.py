@@ -26,3 +26,5 @@ class User(Base):
     is_active = Column(Boolean, default=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    is_verified = Column(Boolean, default=False) # email validation 

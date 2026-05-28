@@ -45,10 +45,20 @@ export default function LoginPage() {
     try {
       await login({ email, password })
       navigate('/dashboard', { replace: true })
-    } catch (err) {
+    }catch (err) {
       console.error('Login error:', err)
-      setError(parseBackendError(err))
-    } finally {
+      const detail = err?.response?.data?.detail
+      if (detail === 'Please verify your email first') { 
+        navigate(
+          `/verify-email?email=${encodeURIComponent(email)}`,
+          { replace: true }
+        )
+        return
+      }
+    
+      setError(parseBackendError(err))}
+
+      finally {
       setLoading(false)
     }
   }

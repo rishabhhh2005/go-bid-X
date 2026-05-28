@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getCurrentUser, loginRequest, registerRequest } from '../services/appService'
+import { getCurrentUser, loginRequest, registerRequest, verifyEmailRequest } from '../services/appService'
 import { getLocalUser, saveLocalUser, removeLocalUser } from '../services/localStorage'
 import { AuthContext } from './AuthContext'
 
@@ -62,8 +62,17 @@ export function AuthProvider({ children }) {
 
   const register = useCallback(async (payload) => {
     await registerRequest(payload)
-    return login({ email: payload.email, password: payload.password })
-  }, [login])
+  }, [])
+
+  const verify = useCallback(async (payload) => {
+    const data = await verifyEmailRequest(payload)
+    if (data.access_token) {
+      localStorage.setItem('gobidx_token', data.access_token)
+      setUser(data.user)
+      saveLocalUser(data.user)
+    }
+    return data
+  }, [])
 
   useEffect(() => {
     const handleStorageChange = (event) => {
@@ -82,9 +91,10 @@ export function AuthProvider({ children }) {
       login,
       logout,
       register,
+      verify,
       isAuthenticated: Boolean(user),
     }),
-    [user, loading, login, logout, register],
+    [user, loading, login, logout, register, verify],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -4,8 +4,15 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
-    FRONTEND_URL: str = "http://localhost:5173,https://go-bid-x-frontend.vercel.app"
 
+    SMTP_HOST: str
+    SMTP_PORT: int
+    SMTP_EMAIL: str
+    SMTP_PASSWORD: str
+    
+    FRONTEND_URL: str = "http://localhost:5173"
+
+    
     model_config = SettingsConfigDict(env_file=".env")
 
 settings = Settings()

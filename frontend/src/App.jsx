@@ -8,6 +8,7 @@ import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import RFQFormPage from './pages/RFQFormPage'
 import RFQDetailPage from './pages/RFQDetailPage'
+import VerifyEmailPage from './pages/VerifyEmailPage'
 
 function AppRoutes() {
   const { isAuthenticated } = useAuth()
@@ -17,6 +18,7 @@ function AppRoutes() {
       <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />} />
       <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
       <Route path="/register" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <RegisterPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />}/>
       <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
       <Route path="/rfq/new" element={<ProtectedRoute><RFQFormPage /></ProtectedRoute>} />
       <Route path="/rfq/:id" element={<ProtectedRoute><RFQDetailPage /></ProtectedRoute>} />

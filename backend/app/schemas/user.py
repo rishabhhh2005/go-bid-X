@@ -25,6 +25,8 @@ class UserResponse(BaseModel):
     role: str
     company_name: Optional[str] = None
     is_active: bool
+    is_verified: bool
+    
     created_at: datetime
 
     class Config:

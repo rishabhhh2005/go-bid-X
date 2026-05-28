@@ -1,170 +1,523 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+
 import { useAuth } from '../hooks/useAuth'
-import logo from "../assets/logo.png";
+
+import logo from "../assets/logo.png"
+
 export default function RegisterPage() {
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] =
+    useState(false)
+
   const [fullName, setFullName] = useState('')
   const [companyName, setCompanyName] = useState('')
+
   const [role, setRole] = useState('buyer')
+
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
   const { register } = useAuth()
+
   const navigate = useNavigate()
 
   const parseBackendError = (err) => {
-    const detail = err?.response?.data?.detail || err?.message
-    if (err?.response?.status === 409 || detail === 'Email already registered') {
+
+    const detail =
+      err?.response?.data?.detail || err?.message
+
+    if (
+      err?.response?.status === 409 ||
+      detail === 'Email already registered'
+    ) {
       return 'User already exists. Please login or use a different email.'
     }
-    if (detail === 'Invalid email or password') {
-      return 'Invalid email or password.'
-    }
-    return typeof detail === 'string' ? detail : 'Unable to register. Check your details and try again.'
+
+    return typeof detail === 'string'
+      ? detail
+      : 'Unable to register. Check your details and try again.'
   }
 
   const validateRegisterForm = () => {
+
     if (!fullName.trim()) {
       return 'Full name is required.'
     }
+
     if (!email.trim()) {
       return 'Email address is required.'
     }
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
     if (!emailRegex.test(email)) {
       return 'Please enter a valid email address.'
     }
+
     if (!password) {
       return 'Password is required.'
     }
+
     if (password.length < 8) {
       return 'Password must be at least 8 characters long.'
     }
+
+    if (password !== confirmPassword) {
+      return 'Passwords do not match.'
+    }
+
     return ''
   }
 
   const handleSubmit = async (event) => {
+
     event.preventDefault()
+
     setError('')
+
     const validationError = validateRegisterForm()
+
     if (validationError) {
       setError(validationError)
       return
     }
 
     setLoading(true)
+
     try {
-      await register({ email, password, full_name: fullName, company_name: companyName, role })
-      navigate('/dashboard', { replace: true })
+
+      await register({
+        email,
+        password,
+        full_name: fullName,
+        company_name: companyName,
+        role
+      })
+
+      navigate(
+  `/verify-email?email=${encodeURIComponent(email)}`,
+  {
+    replace: true,
+    state: {
+      password
+    }
+  }
+)
+
     } catch (err) {
+
       console.error('Registration error:', err)
+
       setError(parseBackendError(err))
+
     } finally {
+
       setLoading(false)
     }
   }
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-slate-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <Link to="/" className="absolute top-5 left-5 flex items-center gap-1.5 text-sm text-slate-500 hover:text-brand-600 transition-colors z-20">
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+
+      <Link
+        to="/"
+        className="absolute top-5 left-5 flex items-center gap-1.5 text-sm text-slate-500 hover:text-brand-600 transition-colors z-20"
+      >
+        <svg
+          className="w-4 h-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 19l-7-7 7-7"
+          />
+        </svg>
+
         Back to Home
       </Link>
-      {/* Decorative background blobs */}
+
       <div className="absolute top-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-brand-300/20 blur-[120px] pointer-events-none" />
+
       <div className="absolute bottom-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-blue-300/20 blur-[120px] pointer-events-none" />
 
       <div className="max-w-xl w-full space-y-8 glass-panel p-10 relative z-10 animate-fade-in shadow-2xl">
+
         <div className="text-center">
+
           <div className="mx-auto mb-6 flex justify-center">
-  <img
-    src={logo}
-    alt="GoBidX"
-    className="h-16 w-auto object-contain"
-  />
-</div>
-          <h1 className="text-4xl font-display font-bold text-slate-900 tracking-tight">Create an Account</h1>
-          <p className="mt-3 text-base text-slate-600">Register as a buyer or supplier to start bidding and sourcing.</p>
+            <img
+              src={logo}
+              alt="GoBidX"
+              className="h-16 w-auto object-contain"
+            />
+          </div>
+
+          <h1 className="text-4xl font-display font-bold text-slate-900 tracking-tight">
+            Create an Account
+          </h1>
+
+          <p className="mt-3 text-base text-slate-600">
+            Register as a buyer or supplier to start bidding and sourcing.
+          </p>
+
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-10 space-y-6">
+        <form
+          onSubmit={handleSubmit}
+          className="mt-10 space-y-6"
+        >
+
           <div className="grid gap-6 sm:grid-cols-2">
+
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Full Name</label>
+
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                Full Name
+              </label>
+
               <input
                 type="text"
                 value={fullName}
-                onChange={(event) => setFullName(event.target.value)}
+                onChange={(event) =>
+                  setFullName(event.target.value)
+                }
                 required
                 placeholder="John Doe"
                 className="input-field"
               />
+
             </div>
+
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Company</label>
+
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                Company
+              </label>
+
               <input
                 type="text"
                 value={companyName}
-                onChange={(event) => setCompanyName(event.target.value)}
+                onChange={(event) =>
+                  setCompanyName(event.target.value)
+                }
                 placeholder="Acme Corp (Optional)"
                 className="input-field"
               />
+
             </div>
+
           </div>
+
           <div className="grid gap-6 sm:grid-cols-2">
+
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Email Address</label>
+
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                Email Address
+              </label>
+
               <input
                 type="email"
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(event) =>
+                  setEmail(event.target.value)
+                }
                 required
                 placeholder="you@company.com"
                 className="input-field"
               />
+
             </div>
+
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                required
-                placeholder="••••••••"
-                className="input-field"
-                minLength="8"
-              />
-              <p className="text-xs text-slate-500 mt-1">Minimum 8 characters required</p>
+
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                Password
+              </label>
+
+              <div className="relative">
+
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(event) =>
+                    setPassword(event.target.value)
+                  }
+                  required
+                  placeholder="••••••••"
+                  className="input-field pr-12"
+                  minLength="8"
+                />
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowPassword(!showPassword)
+                  }
+                  className="absolute inset-y-0 right-0 px-4 flex items-center text-slate-500 hover:text-slate-700"
+                >
+                  {showPassword ? (
+
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="w-5 h-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M3 3l18 18"
+                      />
+
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M10.584 10.587a2 2 0 102.829 2.828"
+                      />
+
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M9.88 4.24A9.953 9.953 0 0112 4c5 0 9 4 9 8 0 1.08-.292 2.11-.803 3.047M6.228 6.228C4.24 7.65 3 9.72 3 12c0 4 4 8 9 8 2.28 0 4.35-1.24 5.772-3.228"
+                      />
+                    </svg>
+
+                  ) : (
+
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="w-5 h-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                      />
+                    </svg>
+
+                  )}
+                </button>
+
+              </div>
+
             </div>
+
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-3">Select Role</label>
-            <div className="flex gap-4">
-              <label className={`flex-1 flex items-center justify-center gap-3 cursor-pointer p-4 rounded-2xl border-2 transition-all duration-200 ${role === 'buyer' ? 'border-brand-500 bg-brand-50 shadow-md transform scale-[1.02]' : 'border-slate-200 bg-white hover:border-brand-300'}`}>
-                <input type="radio" value="buyer" checked={role === 'buyer'} onChange={() => setRole('buyer')} className="sr-only" />
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${role === 'buyer' ? 'border-brand-600' : 'border-slate-300'}`}>
-                  {role === 'buyer' && <div className="w-2.5 h-2.5 rounded-full bg-brand-600" />}
-                </div>
-                <span className={`font-bold ${role === 'buyer' ? 'text-brand-700' : 'text-slate-600'}`}>Buyer</span>
-              </label>
-              <label className={`flex-1 flex items-center justify-center gap-3 cursor-pointer p-4 rounded-2xl border-2 transition-all duration-200 ${role === 'supplier' ? 'border-brand-500 bg-brand-50 shadow-md transform scale-[1.02]' : 'border-slate-200 bg-white hover:border-brand-300'}`}>
-                <input type="radio" value="supplier" checked={role === 'supplier'} onChange={() => setRole('supplier')} className="sr-only" />
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${role === 'supplier' ? 'border-brand-600' : 'border-slate-300'}`}>
-                  {role === 'supplier' && <div className="w-2.5 h-2.5 rounded-full bg-brand-600" />}
-                </div>
-                <span className={`font-bold ${role === 'supplier' ? 'text-brand-700' : 'text-slate-600'}`}>Supplier</span>
-              </label>
+
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+              Confirm Password
+            </label>
+
+            <div className="relative">
+
+              <input
+                type={
+                  showConfirmPassword
+                    ? 'text'
+                    : 'password'
+                }
+                value={confirmPassword}
+                onChange={(event) =>
+                  setConfirmPassword(event.target.value)
+                }
+                required
+                placeholder="••••••••"
+                className="input-field pr-12"
+                minLength="8"
+              />
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowConfirmPassword(
+                    !showConfirmPassword
+                  )
+                }
+                className="absolute inset-y-0 right-0 px-4 flex items-center text-slate-500 hover:text-slate-700"
+              >
+                {showConfirmPassword ? (
+
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-5 h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M3 3l18 18"
+                    />
+
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M10.584 10.587a2 2 0 102.829 2.828"
+                    />
+
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M9.88 4.24A9.953 9.953 0 0112 4c5 0 9 4 9 8 0 1.08-.292 2.11-.803 3.047M6.228 6.228C4.24 7.65 3 9.72 3 12c0 4 4 8 9 8 2.28 0 4.35-1.24 5.772-3.228"
+                    />
+                  </svg>
+
+                ) : (
+
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-5 h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    />
+                  </svg>
+
+                )}
+              </button>
+
             </div>
+
+            <p className="text-xs text-slate-500 mt-1">
+              Minimum 8 characters required
+            </p>
+
+          </div>
+
+          <div>
+
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-3">
+              Select Role
+            </label>
+
+            <div className="flex gap-4">
+
+              <label className={`flex-1 flex items-center justify-center gap-3 cursor-pointer p-4 rounded-2xl border-2 transition-all duration-200 ${role === 'buyer'
+                ? 'border-brand-500 bg-brand-50 shadow-md transform scale-[1.02]'
+                : 'border-slate-200 bg-white hover:border-brand-300'
+                }`}>
+
+                <input
+                  type="radio"
+                  value="buyer"
+                  checked={role === 'buyer'}
+                  onChange={() => setRole('buyer')}
+                  className="sr-only"
+                />
+
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${role === 'buyer'
+                  ? 'border-brand-600'
+                  : 'border-slate-300'
+                  }`}>
+                  {role === 'buyer' && (
+                    <div className="w-2.5 h-2.5 rounded-full bg-brand-600" />
+                  )}
+                </div>
+
+                <span className={`font-bold ${role === 'buyer'
+                  ? 'text-brand-700'
+                  : 'text-slate-600'
+                  }`}>
+                  Buyer
+                </span>
+
+              </label>
+
+              <label className={`flex-1 flex items-center justify-center gap-3 cursor-pointer p-4 rounded-2xl border-2 transition-all duration-200 ${role === 'supplier'
+                ? 'border-brand-500 bg-brand-50 shadow-md transform scale-[1.02]'
+                : 'border-slate-200 bg-white hover:border-brand-300'
+                }`}>
+
+                <input
+                  type="radio"
+                  value="supplier"
+                  checked={role === 'supplier'}
+                  onChange={() => setRole('supplier')}
+                  className="sr-only"
+                />
+
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${role === 'supplier'
+                  ? 'border-brand-600'
+                  : 'border-slate-300'
+                  }`}>
+                  {role === 'supplier' && (
+                    <div className="w-2.5 h-2.5 rounded-full bg-brand-600" />
+                  )}
+                </div>
+
+                <span className={`font-bold ${role === 'supplier'
+                  ? 'text-brand-700'
+                  : 'text-slate-600'
+                  }`}>
+                  Supplier
+                </span>
+
+              </label>
+
+            </div>
+
           </div>
 
           {error && (
             <div className="rounded-xl p-4 flex items-start gap-3 border bg-red-50/80 border-red-200 text-red-800 animate-pulse">
-              <svg className="w-5 h-5 shrink-0 mt-0.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+
+              <svg
+                className="w-5 h-5 shrink-0 mt-0.5 text-red-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
-              <p className="text-sm font-medium">{error}</p>
+
+              <p className="text-sm font-medium">
+                {error}
+              </p>
+
             </div>
           )}
 
@@ -173,29 +526,52 @@ export default function RegisterPage() {
             disabled={loading}
             className="w-full btn-primary py-4 text-base flex justify-center items-center gap-2"
           >
+
             {loading ? (
               <>
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+
                 <span>Creating Account...</span>
               </>
             ) : (
               <>
                 <span>Register for GoBidX</span>
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M14 5l7 7m0 0l-7 7m7-7H3"
+                  />
                 </svg>
               </>
             )}
+
           </button>
+
         </form>
 
         <p className="mt-8 text-center text-sm font-medium text-slate-600">
+
           Already registered?{' '}
-          <Link to="/login" className="text-brand-600 hover:text-brand-700 font-bold hover:underline transition-all">
+
+          <Link
+            to="/login"
+            className="text-brand-600 hover:text-brand-700 font-bold hover:underline transition-all"
+          >
             Log In
           </Link>
+
         </p>
+
       </div>
+
     </div>
   )
 }
