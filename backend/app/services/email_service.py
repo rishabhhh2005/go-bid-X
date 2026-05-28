@@ -32,5 +32,5 @@ This OTP expires in 5 minutes.
         port=settings.SMTP_PORT,
         username=settings.SMTP_EMAIL,
         password=settings.SMTP_PASSWORD,
-        start_tls=True,
+        use_tls=True,
     )
